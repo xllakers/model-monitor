@@ -6,31 +6,61 @@ from typing import Optional
 
 
 def _norm(s: str) -> str:
+    """Strip provider prefix, remove non-alphanumeric, lowercase."""
+    s = s.split("/", 1)[-1]
     return re.sub(r"[^a-z0-9]", "", s.lower())
 
 
-def _find_aa(model_id: str, aa: dict) -> dict:
-    key = _norm(model_id)
-    for k, v in aa.items():
-        nk = _norm(k)
-        if nk == key or nk in key or key in nk:
-            return v
-    return {}
+def _tokens(s: str) -> set:
+    """Token set for fuzzy matching: strip provider, date suffixes, split on separators."""
+    s = s.split("/", 1)[-1]                          # strip "provider/"
+    s = re.sub(r"-\d{8}$", "", s)                   # strip trailing -YYYYMMDD
+    s = re.sub(r":\w+$", "", s)                      # strip :free, :nitro etc.
+    parts = re.split(r"[^a-z0-9]+", s.lower())
+    return {p for p in parts if p}
 
 
-def _find_or(model_id: str, or_ranks: dict) -> Optional[int]:
+def _token_overlap(a: set, b: set) -> float:
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
+
+
+def _find_pricing(model_id: str, pricing: dict) -> dict:
+    """Match lmarena model_id to OR pricing dict (keyed by 'provider/slug')."""
     key = _norm(model_id)
-    for k, v in or_ranks.items():
-        if _norm(k) in key or key in _norm(k):
+    ktok = _tokens(model_id)
+    best, best_score = {}, 0.0
+    for or_id, v in pricing.items():
+        nk = _norm(or_id)
+        if nk == key:
             return v
-    return None
+        score = _token_overlap(ktok, _tokens(or_id))
+        if score > best_score:
+            best, best_score = v, score
+    return best if best_score >= 0.5 else {}
+
+
+def _find_usage_rank(model_id: str, usage_ranks: dict) -> Optional[int]:
+    """Match lmarena model_id to OR usage ranks (keyed by 'provider/slug')."""
+    key = _norm(model_id)
+    ktok = _tokens(model_id)
+    best, best_score = None, 0.0
+    for or_id, rank in usage_ranks.items():
+        nk = _norm(or_id)
+        if nk == key:
+            return rank
+        score = _token_overlap(ktok, _tokens(or_id))
+        if score > best_score:
+            best, best_score = rank, score
+    return best if best_score >= 0.5 else None
 
 
 def _model_display(model_id: str) -> str:
     return model_id.replace("-", " ").replace("_", " ").title()
 
 
-def analyze(lmarena: dict, aa: dict, or_ranks: dict) -> dict:
+def analyze(lmarena: dict, aa: dict, or_data: dict) -> dict:
     """
     lmarena shape:
       {
@@ -39,7 +69,14 @@ def analyze(lmarena: dict, aa: dict, or_ranks: dict) -> dict:
         "top50_30d": {"general": [model_id,...], "coding": [...]} | absent,
         "fetched_at": float,
       }
+    or_data shape (from openrouter.fetch()):
+      {
+        "pricing":     {"provider/slug": {price_input, price_output}},
+        "usage_ranks": {"provider/slug": rank_int},
+      }
     """
+    pricing = or_data.get("pricing", {})
+    usage_ranks = or_data.get("usage_ranks", {})
     current = lmarena.get("current", {})
     prev_snap = lmarena.get("previous") or {}
     previous = prev_snap.get("current", {}) if isinstance(prev_snap, dict) else {}
@@ -71,8 +108,8 @@ def analyze(lmarena: dict, aa: dict, or_ranks: dict) -> dict:
             # rank_delta: positive = moved up (lower rank number = better)
             rank_delta = (prev_rank - row["rank"]) if prev_rank is not None else None
 
-            aa_info = _find_aa(mid, aa)
-            or_rank = _find_or(mid, or_ranks)
+            price_info = _find_pricing(mid, pricing)
+            or_rank = _find_usage_rank(mid, usage_ranks)
 
             merged.append({
                 "model_id": mid,
@@ -82,8 +119,9 @@ def analyze(lmarena: dict, aa: dict, or_ranks: dict) -> dict:
                 "votes": row.get("votes", 0),
                 "prev_rank": prev_rank,
                 "rank_delta": rank_delta,    # positive = riser
-                "price_input": aa_info.get("price_input"),
-                "speed": aa_info.get("speed"),
+                "price_input": price_info.get("price_input"),
+                "price_output": price_info.get("price_output"),
+                "speed": None,               # requires AA API key
                 "or_rank": or_rank,
                 "is_riser": False,
                 "is_new_star": False,

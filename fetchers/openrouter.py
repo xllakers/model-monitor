@@ -1,6 +1,11 @@
-"""Scrape OpenRouter /rankings for real-world usage rank."""
+"""
+Two things from OpenRouter:
+  1. Pricing — /api/v1/models (free JSON API, per-token prices)
+  2. Usage rank — /rankings page (RSC-encoded weekly token usage)
+"""
 import json
 import os
+import re
 import time
 import requests
 from bs4 import BeautifulSoup
@@ -8,14 +13,20 @@ from bs4 import BeautifulSoup
 CACHE_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "openrouter_cache.json")
 CACHE_TTL = 7200
 
-OR_URL = "https://openrouter.ai/rankings"
+OR_MODELS_URL = "https://openrouter.ai/api/v1/models"
+OR_RANKINGS_URL = "https://openrouter.ai/rankings"
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 Chrome/120.0 Safari/537.36"
+    )
+}
 
 
 def _load_cache():
     if not os.path.exists(CACHE_FILE):
         return None
-    age = time.time() - os.path.getmtime(CACHE_FILE)
-    if age > CACHE_TTL:
+    if time.time() - os.path.getmtime(CACHE_FILE) > CACHE_TTL:
         return None
     with open(CACHE_FILE) as f:
         return json.load(f)
@@ -27,78 +38,82 @@ def _save_cache(data):
         json.dump(data, f)
 
 
+def _fetch_pricing() -> dict[str, dict]:
+    """Return {model_slug: {price_input, price_output}} from OR models API.
+    Prices are per 1M tokens (API returns per-token strings).
+    """
+    try:
+        r = requests.get(OR_MODELS_URL, timeout=15, headers=HEADERS)
+        r.raise_for_status()
+        models = r.json().get("data", [])
+    except Exception:
+        return {}
+
+    result = {}
+    for m in models:
+        mid = m.get("id", "")  # e.g. "anthropic/claude-opus-4-6"
+        if not mid:
+            continue
+        pricing = m.get("pricing", {})
+        try:
+            # API gives price per token as string; multiply by 1M
+            price_in = float(pricing.get("prompt") or 0) * 1_000_000
+            price_out = float(pricing.get("completion") or 0) * 1_000_000
+        except (ValueError, TypeError):
+            continue
+        if price_in > 0 or price_out > 0:
+            result[mid.lower()] = {
+                "price_input": round(price_in, 4),
+                "price_output": round(price_out, 4),
+            }
+    return result
+
+
+def _fetch_usage_ranks() -> dict[str, int]:
+    """Return {model_id: rank} from latest week's token usage on OR rankings page."""
+    try:
+        r = requests.get(OR_RANKINGS_URL, timeout=20, headers=HEADERS)
+        r.raise_for_status()
+    except Exception:
+        return {}
+
+    text = r.text
+    # Data is RSC-encoded: each quote is escaped as \"
+    # Pattern: \"x\":\"YYYY-MM-DD\",\"ys\":{\"provider/model\":tokens,...}
+    chunks = re.findall(
+        r'\\"x\\":\\"([\d-]+)\\"[^}]*\\"ys\\":\{([^}]+)\}',
+        text,
+    )
+    if not chunks:
+        return {}
+
+    latest_date = max(c[0] for c in chunks)
+    ys_raw = next(ys for date, ys in chunks if date == latest_date)
+
+    # Unescape \" → " then parse as JSON object
+    clean = ys_raw.replace('\\"', '"')
+    try:
+        ys = json.loads("{" + clean + "}")
+    except Exception:
+        return {}
+
+    # Sort by token volume desc, skip "Others"
+    sorted_models = sorted(
+        ((k, v) for k, v in ys.items() if k.lower() != "others"),
+        key=lambda x: -x[1],
+    )
+    return {m.lower(): rank for rank, (m, _) in enumerate(sorted_models, start=1)}
+
+
 def fetch() -> dict:
-    """Return dict: { model_name_lower: rank (1-based int) }."""
+    """Return merged {pricing: {...}, usage_ranks: {...}}."""
     cached = _load_cache()
     if cached is not None:
         return cached
 
-    result = {}
-    try:
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            )
-        }
-        resp = requests.get(OR_URL, timeout=15, headers=headers)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "html.parser")
+    pricing = _fetch_pricing()
+    usage_ranks = _fetch_usage_ranks()
 
-        # OpenRouter rankings page: look for model entries in a ranked list
-        # The page is Next.js SSR — try extracting from __NEXT_DATA__ script
-        script = soup.find("script", id="__NEXT_DATA__")
-        if script and script.string:
-            page_data = json.loads(script.string)
-            # Navigate the nested props to find rankings list
-            rankings = _extract_rankings_from_next_data(page_data)
-            if rankings:
-                result = rankings
-
-        # Fallback: parse visible ranked rows
-        if not result:
-            rows = soup.select("tr, [data-rank]")
-            rank = 1
-            for row in rows:
-                name_el = row.select_one("td:first-child, [data-model]")
-                if name_el:
-                    name = name_el.get_text(strip=True).lower()
-                    if name:
-                        result[name] = rank
-                        rank += 1
-    except Exception:
-        pass
-
-    _save_cache(result)
-    return result
-
-
-def _extract_rankings_from_next_data(data: dict) -> dict:
-    """Recursively hunt for a list that looks like model rankings."""
-    result = {}
-
-    def _search(obj, depth=0):
-        if depth > 10:
-            return
-        if isinstance(obj, list):
-            for i, item in enumerate(obj):
-                if isinstance(item, dict):
-                    # Look for model identifier fields
-                    name = (
-                        item.get("slug")
-                        or item.get("name")
-                        or item.get("model_id")
-                        or item.get("id")
-                        or ""
-                    )
-                    if name and (item.get("rank") or i < 200):
-                        rank = item.get("rank", i + 1)
-                        result[str(name).lower()] = rank
-                _search(item, depth + 1)
-        elif isinstance(obj, dict):
-            for v in obj.values():
-                _search(v, depth + 1)
-
-    _search(data)
-    return result
+    data = {"pricing": pricing, "usage_ranks": usage_ranks}
+    _save_cache(data)
+    return data
