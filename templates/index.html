@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM Monitor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", monospace; font-size: 13px; background: #0d1117; color: #c9d1d9; line-height: 1.5; }
+
+    header { padding: 18px 24px; border-bottom: 1px solid #21262d; display: flex; align-items: baseline; gap: 16px; }
+    header h1 { font-size: 18px; font-weight: 600; color: #e6edf3; letter-spacing: -0.3px; }
+    header .meta { font-size: 11px; color: #6e7681; }
+
+    main { max-width: 1300px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; gap: 32px; }
+
+    section h2 { font-size: 13px; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+
+    /* Tables */
+    .table-wrap { overflow-x: auto; border: 1px solid #21262d; border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #161b22; color: #8b949e; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 12px; text-align: left; border-bottom: 1px solid #21262d; white-space: nowrap; }
+    td { padding: 7px 12px; border-bottom: 1px solid #21262d; vertical-align: middle; white-space: nowrap; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #161b22; }
+
+    /* Row highlights */
+    tr.riser td { background: rgba(35, 134, 54, 0.08); }
+    tr.riser:hover td { background: rgba(35, 134, 54, 0.15); }
+    tr.new-star td { background: rgba(210, 153, 34, 0.08); }
+    tr.new-star:hover td { background: rgba(210, 153, 34, 0.15); }
+
+    /* Value badges */
+    .delta { font-weight: 600; }
+    .delta.pos { color: #3fb950; }
+    .delta.neg { color: #f85149; }
+    .delta.neu { color: #6e7681; }
+
+    .rank-badge { display: inline-block; min-width: 24px; text-align: center; padding: 1px 5px; border-radius: 3px; font-size: 11px; font-weight: 700; background: #21262d; color: #8b949e; }
+    .rank-badge.top3 { background: #2d333b; color: #e3b341; }
+
+    .model-name { color: #e6edf3; font-weight: 500; max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
+    .model-name small { color: #8b949e; font-weight: 400; font-size: 11px; }
+
+    .elo-val { color: #a5d6ff; font-variant-numeric: tabular-nums; }
+    .price-val { color: #c9d1d9; font-variant-numeric: tabular-nums; }
+    .speed-val { color: #c9d1d9; font-variant-numeric: tabular-nums; }
+    .na { color: #3d444d; }
+
+    /* Tabs */
+    .tab-group { display: flex; flex-direction: column; gap: 0; }
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid #21262d; margin-bottom: 0; }
+    .tab { padding: 8px 18px; font-size: 12px; font-weight: 600; color: #6e7681; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; border-top: none; border-left: none; border-right: none; }
+    .tab.active { color: #e6edf3; border-bottom-color: #388bfd; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .section-label { font-size: 11px; font-weight: 700; color: #6e7681; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+
+    .legend { display: flex; gap: 16px; font-size: 11px; color: #6e7681; margin-top: 10px; }
+    .legend span { display: flex; align-items: center; gap: 5px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot.green { background: #3fb950; }
+    .dot.yellow { background: #e3b341; }
+
+    .empty { padding: 20px 12px; color: #3d444d; font-style: italic; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>LLM Monitor</h1>
+  <span class="meta">data: {{ last_updated }} &nbsp;·&nbsp; lmarena-history + AA + OpenRouter</span>
+</header>
+
+<main>
+
+  {# ── Fast Risers ────────────────────────────────────────────────── #}
+  <section>
+    <h2>Fast Risers — 7-day rank change</h2>
+    <div class="grid-2">
+      {% for cat_label, cat_key in [("General", "general"), ("Coding", "coding")] %}
+      <div>
+        <div class="section-label">{{ cat_label }}</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Model</th>
+                <th>rank Δ</th>
+                <th>ELO</th>
+                <th>Price /1M</th>
+                <th>tok/s</th>
+                <th>OR rank</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if fast_risers[cat_key] %}
+                {% for r in fast_risers[cat_key] %}
+                <tr class="riser">
+                  <td><span class="rank-badge {% if r.rank <= 3 %}top3{% endif %}">{{ r.rank }}</span></td>
+                  <td><span class="model-name">{{ r.model_display }}</span></td>
+                  <td><span class="delta pos">+{{ r.rank_delta }}</span></td>
+                  <td><span class="elo-val">{{ r.elo }}</span></td>
+                  <td>{% if r.price_input is not none %}<span class="price-val">${{ "%.2f"|format(r.price_input) }}</span>{% else %}<span class="na">—</span>{% endif %}</td>
+                  <td>{% if r.speed is not none %}<span class="speed-val">{{ r.speed|int }}</span>{% else %}<span class="na">—</span>{% endif %}</td>
+                  <td>{% if r.or_rank is not none %}<span class="rank-badge">{{ r.or_rank }}</span>{% else %}<span class="na">—</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr><td colspan="7" class="empty">No data</td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  {# ── New Stars ───────────────────────────────────────────────────── #}
+  <section>
+    <h2>New Stars — top-30 now, absent from top-50 thirty days ago</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Rank</th>
+            <th>Model</th>
+            <th>ELO</th>
+            <th>rank Δ</th>
+            <th>Price /1M</th>
+            <th>tok/s</th>
+            <th>OR rank</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if new_stars %}
+            {% for r in new_stars %}
+            <tr class="new-star">
+              <td><span class="na" style="color:#e3b341;font-weight:600;">{{ r.category }}</span></td>
+              <td><span class="rank-badge {% if r.rank <= 3 %}top3{% endif %}">{{ r.rank }}</span></td>
+              <td><span class="model-name">{{ r.model_display }}</span></td>
+              <td><span class="elo-val">{{ r.elo }}</span></td>
+              <td>
+                {% if r.rank_delta is not none %}
+                  <span class="delta {% if r.rank_delta > 0 %}pos{% elif r.rank_delta < 0 %}neg{% else %}neu{% endif %}">
+                    {% if r.rank_delta > 0 %}+{% endif %}{{ r.rank_delta }}
+                  </span>
+                {% else %}<span class="na">—</span>{% endif %}
+              </td>
+              <td>{% if r.price_input is not none %}<span class="price-val">${{ "%.2f"|format(r.price_input) }}</span>{% else %}<span class="na">—</span>{% endif %}</td>
+              <td>{% if r.speed is not none %}<span class="speed-val">{{ r.speed|int }}</span>{% else %}<span class="na">—</span>{% endif %}</td>
+              <td>{% if r.or_rank is not none %}<span class="rank-badge">{{ r.or_rank }}</span>{% else %}<span class="na">—</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr><td colspan="8" class="empty">No new stars in the past 30 days</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {# ── Full Rankings ───────────────────────────────────────────────── #}
+  <section>
+    <h2>Full Rankings</h2>
+    <div class="tab-group">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('general', this)">General</button>
+        <button class="tab" onclick="switchTab('coding', this)">Coding</button>
+      </div>
+
+      {% for cat_key in ["general", "coding"] %}
+      <div class="tab-panel {% if cat_key == 'general' %}active{% endif %}" id="tab-{{ cat_key }}">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Model</th>
+                <th>ELO</th>
+                <th>rank Δ</th>
+                <th>Price /1M in</th>
+                <th>tok/s</th>
+                <th>OR rank</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if rankings[cat_key] %}
+                {% for r in rankings[cat_key] %}
+                <tr class="{% if r.is_riser %}riser{% elif r.is_new_star %}new-star{% endif %}">
+                  <td><span class="rank-badge {% if r.rank <= 3 %}top3{% endif %}">{{ r.rank }}</span></td>
+                  <td>
+                    <span class="model-name">
+                      {{ r.model_display }}
+                      {% if r.is_new_star %}<small style="color:#e3b341;"> ★new</small>{% endif %}
+                    </span>
+                  </td>
+                  <td><span class="elo-val">{{ r.elo }}</span></td>
+                  <td>
+                    {% if r.rank_delta is not none %}
+                      <span class="delta {% if r.rank_delta > 0 %}pos{% elif r.rank_delta < 0 %}neg{% else %}neu{% endif %}">
+                        {% if r.rank_delta > 0 %}+{% endif %}{{ r.rank_delta }}
+                      </span>
+                    {% else %}<span class="na">—</span>{% endif %}
+                  </td>
+                  <td>{% if r.price_input is not none %}<span class="price-val">${{ "%.2f"|format(r.price_input) }}</span>{% else %}<span class="na">—</span>{% endif %}</td>
+                  <td>{% if r.speed is not none %}<span class="speed-val">{{ r.speed|int }}</span>{% else %}<span class="na">—</span>{% endif %}</td>
+                  <td>{% if r.or_rank is not none %}<span class="rank-badge">{{ r.or_rank }}</span>{% else %}<span class="na">—</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr><td colspan="7" class="empty">No data</td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="legend">
+      <span><span class="dot green"></span> Fast riser (top-10, 7d rank change)</span>
+      <span><span class="dot yellow"></span> New star (not in top-50 thirty days ago)</span>
+    </div>
+  </section>
+
+</main>
+
+<script>
+function switchTab(cat, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + cat).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+
+</body>
+</html>
