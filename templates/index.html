@@ -5,114 +5,303 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LLM Monitor</title>
   <style>
+    :root {
+      /* Light/Dark dynamic theme using standard iOS-like colors */
+      --bg: #f2f2f7;
+      --card-bg: #ffffff;
+      --text-main: #000000;
+      --text-secondary: #8e8e93;
+      --accent: #007aff;
+      --border: #e5e5ea;
+      --tab-bg: #e3e3e8;
+      --tab-active: #ffffff;
+      --badge-yellow: #ffcc00;
+      --badge-green: #34c759;
+      --glass: rgba(255, 255, 255, 0.75);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #000000;
+        --card-bg: #1c1c1e;
+        --text-main: #ffffff;
+        --text-secondary: #8e8e93;
+        --accent: #0a84ff;
+        --border: #38383a;
+        --tab-bg: #3a3a3c;
+        --tab-active: #636366;
+        --glass: rgba(28, 28, 30, 0.85);
+      }
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", monospace; font-size: 13px; background: #0d1117; color: #c9d1d9; line-height: 1.5; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.4;
+    }
 
-    header { padding: 18px 24px; border-bottom: 1px solid #21262d; display: flex; align-items: baseline; gap: 16px; }
-    header h1 { font-size: 18px; font-weight: 600; color: #e6edf3; letter-spacing: -0.3px; }
-    header .meta { font-size: 11px; color: #6e7681; }
+    /* Floating Navigation Pill */
+    header {
+      position: sticky;
+      top: 16px;
+      z-index: 1000;
+      display: flex;
+      justify-content: center;
+      margin-bottom: -32px;
+    }
 
-    main { max-width: 1300px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; gap: 32px; }
+    .nav-pill {
+      background: var(--glass);
+      backdrop-filter: blur(20px) saturate(180%);
+      padding: 8px 16px;
+      border-radius: 99px;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
 
-    section h2 { font-size: 13px; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; }
+    .nav-pill h1 { font-size: 14px; font-weight: 700; color: var(--text-main); }
+    .nav-meta { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
 
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    /* Main Layout */
+    main {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 80px 24px 100px;
+      display: flex;
+      flex-direction: column;
+      gap: 48px;
+    }
 
-    /* Tables */
-    .table-wrap { overflow-x: auto; border: 1px solid #21262d; border-radius: 6px; }
-    table { width: 100%; border-collapse: collapse; }
-    th { background: #161b22; color: #8b949e; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 12px; text-align: left; border-bottom: 1px solid #21262d; white-space: nowrap; }
-    td { padding: 7px 12px; border-bottom: 1px solid #21262d; vertical-align: middle; white-space: nowrap; }
+    section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 0 4px;
+    }
+
+    section h2 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    /* Global Sort Menu Indicator */
+    .sort-indicator-pill {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      background: rgba(0, 122, 255, 0.1);
+      padding: 4px 10px;
+      border-radius: 99px;
+      text-transform: capitalize;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 800px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    /* Tables - Redesigned for sorting */
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th {
+      text-align: left;
+      padding: 12px 16px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    th:hover { background: rgba(0,0,0,0.03); }
+    @media (prefers-color-scheme: dark) { th:hover { background: rgba(255,255,255,0.03); } }
+
+    th.active-sort { color: var(--accent); }
+
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
     tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #161b22; }
+    tr:hover td { background: rgba(0,0,0,0.01); }
+    @media (prefers-color-scheme: dark) { tr:hover td { background: rgba(255,255,255,0.01); } }
 
-    /* Row highlights */
-    tr.riser td { background: rgba(35, 134, 54, 0.08); }
-    tr.riser:hover td { background: rgba(35, 134, 54, 0.15); }
-    tr.new-star td { background: rgba(210, 153, 34, 0.08); }
-    tr.new-star:hover td { background: rgba(210, 153, 34, 0.15); }
+    /* Columns */
+    .col-rank { width: 60px; text-align: center; }
+    .col-model { font-weight: 600; }
+    .col-val { font-variant-numeric: tabular-nums; width: 90px; }
+    .col-delta { width: 70px; font-weight: 700; font-size: 12px; }
 
-    /* Value badges */
-    .delta { font-weight: 600; }
-    .delta.pos { color: #3fb950; }
-    .delta.neg { color: #f85149; }
-    .delta.neu { color: #6e7681; }
+    /* Badges */
+    .rank-num {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      background: var(--bg);
+      width: 24px;
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+    }
+    .top3 .rank-num { background: var(--badge-yellow); color: #000; }
 
-    .rank-badge { display: inline-block; min-width: 24px; text-align: center; padding: 1px 5px; border-radius: 3px; font-size: 11px; font-weight: 700; background: #21262d; color: #8b949e; }
-    .rank-badge.top3 { background: #2d333b; color: #e3b341; }
+    .tag {
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+      text-transform: uppercase;
+    }
+    .tag-new { background: rgba(255, 204, 0, 0.15); color: #b38600; }
+    .tag-rise { background: rgba(52, 199, 89, 0.15); color: #34c759; }
 
-    .model-name { color: #e6edf3; font-weight: 500; max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
-    .model-name small { color: #8b949e; font-weight: 400; font-size: 11px; }
+    /* Tabs (Main List Only) */
+    .tabs {
+      background: var(--tab-bg);
+      padding: 2px;
+      border-radius: 10px;
+      display: inline-flex;
+    }
 
-    .elo-val { color: #a5d6ff; font-variant-numeric: tabular-nums; }
-    .price-val { color: #c9d1d9; font-variant-numeric: tabular-nums; }
-    .speed-val { color: #c9d1d9; font-variant-numeric: tabular-nums; }
-    .na { color: #3d444d; }
+    .tab {
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
 
-    /* Tabs */
-    .tab-group { display: flex; flex-direction: column; gap: 0; }
-    .tabs { display: flex; gap: 0; border-bottom: 1px solid #21262d; margin-bottom: 0; }
-    .tab { padding: 8px 18px; font-size: 12px; font-weight: 600; color: #6e7681; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; border-top: none; border-left: none; border-right: none; }
-    .tab.active { color: #e6edf3; border-bottom-color: #388bfd; }
+    .tab.active {
+      background: var(--tab-active);
+      color: var(--text-main);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
     .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
+    .tab-panel.active { display: block; animation: fadeIn 0.3s; }
 
-    .section-label { font-size: 11px; font-weight: 700; color: #6e7681; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-    .legend { display: flex; gap: 16px; font-size: 11px; color: #6e7681; margin-top: 10px; }
-    .legend span { display: flex; align-items: center; gap: 5px; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; }
-    .dot.green { background: #3fb950; }
-    .dot.yellow { background: #e3b341; }
+    /* Pagination */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-top: 32px;
+    }
 
-    .empty { padding: 20px 12px; color: #3d444d; font-style: italic; }
+    .btn-page {
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      background: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+    }
+    .btn-page.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-page.disabled { opacity: 0.3; pointer-events: none; }
+
+    .na { color: var(--text-secondary); opacity: 0.5; font-size: 12px; }
+
+    /* Sorting Icons */
+    .sort-icon {
+      font-size: 12px;
+      vertical-align: middle;
+      margin-left: 2px;
+      opacity: 0.5;
+    }
+    .active-sort .sort-icon { opacity: 1; }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>LLM Monitor</h1>
-  <span class="meta">data: {{ last_updated }} &nbsp;·&nbsp; lmarena-history + AA + OpenRouter</span>
+  <div class="nav-pill">
+    <h1>LLM Monitor</h1>
+    <span class="nav-meta">{{ last_updated }}</span>
+    <span class="sort-indicator-pill">Sorted by {{ sort_by }}</span>
+  </div>
 </header>
 
 <main>
 
-  {# ── Fast Risers ────────────────────────────────────────────────── #}
+  <!-- Summary Sections (Affected by Global Sort) -->
   <section>
-    <h2>Fast Risers — 7-day rank change</h2>
+    <div class="section-header">
+      <h2>Fast Risers</h2>
+    </div>
     <div class="grid-2">
       {% for cat_label, cat_key in [("General", "general"), ("Coding", "coding")] %}
-      <div>
-        <div class="section-label">{{ cat_label }}</div>
-        <div class="table-wrap">
+      <div class="card">
+        <div class="table-container">
           <table>
             <thead>
               <tr>
-                <th>Rank</th>
-                <th>Model</th>
-                <th>rank Δ</th>
-                <th>ELO</th>
-                <th>Price /1M</th>
-                <th>tok/s</th>
-                <th>OR rank</th>
+                <th class="col-rank">#</th>
+                <th onclick="applySort('rank')">Model</th>
+                <th class="col-delta" onclick="applySort('delta')">Δ</th>
+                <th class="col-val" onclick="applySort('elo')">ELO</th>
               </tr>
             </thead>
             <tbody>
-              {% if fast_risers[cat_key] %}
-                {% for r in fast_risers[cat_key] %}
-                <tr class="riser">
-                  <td><span class="rank-badge {% if r.rank <= 3 %}top3{% endif %}">{{ r.rank }}</span></td>
-                  <td><span class="model-name">{{ r.model_display }}</span></td>
-                  <td><span class="delta pos">+{{ r.rank_delta }}</span></td>
-                  <td><span class="elo-val">{{ r.elo }}</span></td>
-                  <td>{% if r.price_input is not none %}<span class="price-val">${{ "%.2f"|format(r.price_input) }}</span>{% else %}<span class="na">—</span>{% endif %}</td>
-                  <td>{% if r.speed is not none %}<span class="speed-val">{{ r.speed|int }}</span>{% else %}<span class="na">—</span>{% endif %}</td>
-                  <td>{% if r.or_rank is not none %}<span class="rank-badge">{{ r.or_rank }}</span>{% else %}<span class="na">—</span>{% endif %}</td>
-                </tr>
-                {% endfor %}
-              {% else %}
-                <tr><td colspan="7" class="empty">No data</td></tr>
-              {% endif %}
+              {% for r in fast_risers[cat_key] %}
+              <tr class="{% if r.rank <= 3 %}top3{% endif %}">
+                <td class="col-rank"><span class="rank-num">{{ r.rank }}</span></td>
+                <td class="col-model">{{ r.model_display }}</td>
+                <td class="col-delta" style="color: var(--badge-green)">+{{ r.rank_delta }}</td>
+                <td class="col-val" style="color: var(--accent)">{{ r.elo }}</td>
+              </tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>
@@ -121,102 +310,92 @@
     </div>
   </section>
 
-  {# ── New Stars ───────────────────────────────────────────────────── #}
   <section>
-    <h2>New Stars — top-30 now, absent from top-50 thirty days ago</h2>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Category</th>
-            <th>Rank</th>
-            <th>Model</th>
-            <th>ELO</th>
-            <th>rank Δ</th>
-            <th>Price /1M</th>
-            <th>tok/s</th>
-            <th>OR rank</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% if new_stars %}
+    <div class="section-header">
+      <h2>New Stars</h2>
+    </div>
+    <div class="card">
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 100px">Cat</th>
+              <th class="col-rank">Rank</th>
+              <th onclick="applySort('rank')">Model</th>
+              <th class="col-val" onclick="applySort('elo')">ELO</th>
+              <th class="col-val" onclick="applySort('price')">Price</th>
+              <th class="col-val" onclick="applySort('speed')">Speed</th>
+            </tr>
+          </thead>
+          <tbody>
             {% for r in new_stars %}
-            <tr class="new-star">
-              <td><span class="na" style="color:#e3b341;font-weight:600;">{{ r.category }}</span></td>
-              <td><span class="rank-badge {% if r.rank <= 3 %}top3{% endif %}">{{ r.rank }}</span></td>
-              <td><span class="model-name">{{ r.model_display }}</span></td>
-              <td><span class="elo-val">{{ r.elo }}</span></td>
-              <td>
-                {% if r.rank_delta is not none %}
-                  <span class="delta {% if r.rank_delta > 0 %}pos{% elif r.rank_delta < 0 %}neg{% else %}neu{% endif %}">
-                    {% if r.rank_delta > 0 %}+{% endif %}{{ r.rank_delta }}
-                  </span>
-                {% else %}<span class="na">—</span>{% endif %}
-              </td>
-              <td>{% if r.price_input is not none %}<span class="price-val">${{ "%.2f"|format(r.price_input) }}</span>{% else %}<span class="na">—</span>{% endif %}</td>
-              <td>{% if r.speed is not none %}<span class="speed-val">{{ r.speed|int }}</span>{% else %}<span class="na">—</span>{% endif %}</td>
-              <td>{% if r.or_rank is not none %}<span class="rank-badge">{{ r.or_rank }}</span>{% else %}<span class="na">—</span>{% endif %}</td>
+            <tr class="{% if r.rank <= 3 %}top3{% endif %}">
+              <td style="font-size: 10px; font-weight: 800; color: var(--badge-yellow); text-transform: uppercase;">{{ r.category }}</td>
+              <td class="col-rank"><span class="rank-num">{{ r.rank }}</span></td>
+              <td class="col-model">{{ r.model_display }}</td>
+              <td class="col-val" style="color: var(--accent)">{{ r.elo }}</td>
+              <td class="col-val">{% if r.price_input %}${{ "%.2f"|format(r.price_input) }}{% else %}<span class="na">—</span>{% endif %}</td>
+              <td class="col-val">{% if r.speed %}{{ r.speed|int }} <small style="font-size: 10px; opacity:0.6">t/s</small>{% else %}<span class="na">—</span>{% endif %}</td>
             </tr>
             {% endfor %}
-          {% else %}
-            <tr><td colspan="8" class="empty">No new stars in the past 30 days</td></tr>
-          {% endif %}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
     </div>
   </section>
 
-  {# ── Full Rankings ───────────────────────────────────────────────── #}
-  <section>
-    <h2>Full Rankings</h2>
-    <div class="tab-group">
+  <!-- Main Rankings List -->
+  <section id="rankings">
+    <div class="section-header">
+      <h2>All Rankings</h2>
       <div class="tabs">
-        <button class="tab active" onclick="switchTab('general', this)">General</button>
-        <button class="tab" onclick="switchTab('coding', this)">Coding</button>
+        <button class="tab {% if tab == 'general' %}active{% endif %}" onclick="switchTab('general', this)">General</button>
+        <button class="tab {% if tab == 'coding' %}active{% endif %}" onclick="switchTab('coding', this)">Coding</button>
       </div>
+    </div>
 
+    <div class="card">
       {% for cat_key in ["general", "coding"] %}
-      <div class="tab-panel {% if cat_key == 'general' %}active{% endif %}" id="tab-{{ cat_key }}">
-        <div class="table-wrap">
+      <div class="tab-panel {% if tab == cat_key %}active{% endif %}" id="tab-{{ cat_key }}">
+        <div class="table-container">
           <table>
             <thead>
               <tr>
-                <th>Rank</th>
+                <th class="col-rank {% if sort_by == 'rank' %}active-sort{% endif %}" onclick="applySort('rank')">
+                  Rank <span class="sort-icon">{{ '↓' if (sort_by == 'rank' and sort_order == 'desc') else '↑' }}</span>
+                </th>
                 <th>Model</th>
-                <th>ELO</th>
-                <th>rank Δ</th>
-                <th>Price /1M in</th>
-                <th>tok/s</th>
-                <th>OR rank</th>
+                <th class="col-val {% if sort_by == 'elo' %}active-sort{% endif %}" onclick="applySort('elo')">
+                  ELO <span class="sort-icon">{{ '↓' if (sort_by == 'elo' and sort_order == 'desc') else '↑' }}</span>
+                </th>
+                <th class="col-delta {% if sort_by == 'delta' %}active-sort{% endif %}" onclick="applySort('delta')">
+                  Δ <span class="sort-icon">{{ '↓' if (sort_by == 'delta' and sort_order == 'desc') else '↑' }}</span>
+                </th>
+                <th class="col-val {% if sort_by == 'price' %}active-sort{% endif %}" onclick="applySort('price')">
+                  Price <span class="sort-icon">{{ '↓' if (sort_by == 'price' and sort_order == 'desc') else '↑' }}</span>
+                </th>
+                <th class="col-val {% if sort_by == 'speed' %}active-sort{% endif %}" onclick="applySort('speed')">
+                  Speed <span class="sort-icon">{{ '↓' if (sort_by == 'speed' and sort_order == 'desc') else '↑' }}</span>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {% if rankings[cat_key] %}
-                {% for r in rankings[cat_key] %}
-                <tr class="{% if r.is_riser %}riser{% elif r.is_new_star %}new-star{% endif %}">
-                  <td><span class="rank-badge {% if r.rank <= 3 %}top3{% endif %}">{{ r.rank }}</span></td>
-                  <td>
-                    <span class="model-name">
-                      {{ r.model_display }}
-                      {% if r.is_new_star %}<small style="color:#e3b341;"> ★new</small>{% endif %}
-                    </span>
-                  </td>
-                  <td><span class="elo-val">{{ r.elo }}</span></td>
-                  <td>
-                    {% if r.rank_delta is not none %}
-                      <span class="delta {% if r.rank_delta > 0 %}pos{% elif r.rank_delta < 0 %}neg{% else %}neu{% endif %}">
-                        {% if r.rank_delta > 0 %}+{% endif %}{{ r.rank_delta }}
-                      </span>
-                    {% else %}<span class="na">—</span>{% endif %}
-                  </td>
-                  <td>{% if r.price_input is not none %}<span class="price-val">${{ "%.2f"|format(r.price_input) }}</span>{% else %}<span class="na">—</span>{% endif %}</td>
-                  <td>{% if r.speed is not none %}<span class="speed-val">{{ r.speed|int }}</span>{% else %}<span class="na">—</span>{% endif %}</td>
-                  <td>{% if r.or_rank is not none %}<span class="rank-badge">{{ r.or_rank }}</span>{% else %}<span class="na">—</span>{% endif %}</td>
-                </tr>
-                {% endfor %}
-              {% else %}
-                <tr><td colspan="7" class="empty">No data</td></tr>
-              {% endif %}
+              {% for r in rankings[cat_key] %}
+              <tr class="{% if r.rank <= 3 %}top3{% endif %}">
+                <td class="col-rank"><span class="rank-num">{{ r.rank }}</span></td>
+                <td class="col-model">
+                  {{ r.model_display }}
+                  {% if r.is_new_star %}<span class="tag tag-new">NEW</span>{% endif %}
+                  {% if r.is_riser %}<span class="tag tag-rise">RISE</span>{% endif %}
+                </td>
+                <td class="col-val" style="color: var(--accent)">{{ r.elo }}</td>
+                <td class="col-delta">
+                  {% if r.rank_delta %}<span style="color: {% if r.rank_delta > 0 %}var(--badge-green){% else %}red{% endif %}">{{ '+' if r.rank_delta > 0 }}{{ r.rank_delta }}</span>{% else %}<span class="na">—</span>{% endif %}
+                </td>
+                <td class="col-val">{% if r.price_input %}${{ "%.2f"|format(r.price_input) }}{% else %}<span class="na">—</span>{% endif %}</td>
+                <td class="col-val">{% if r.speed %}{{ r.speed|int }}{% else %}<span class="na">—</span>{% endif %}</td>
+              </tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>
@@ -224,20 +403,55 @@
       {% endfor %}
     </div>
 
-    <div class="legend">
-      <span><span class="dot green"></span> Fast riser (top-10, 7d rank change)</span>
-      <span><span class="dot yellow"></span> New star (not in top-50 thirty days ago)</span>
+    <!-- Paging -->
+    {% if total_pages > 1 %}
+    <div class="pagination">
+      <a href="/?page={{ page - 1 }}&tab={{ tab }}&sort={{ sort_by }}&order={{ sort_order }}#rankings" class="btn-page {% if page <= 1 %}disabled{% endif %}">Previous</a>
+      {% for p in range(1, total_pages + 1) %}
+        {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+          <a href="/?page={{ p }}&tab={{ tab }}&sort={{ sort_by }}&order={{ sort_order }}#rankings" class="btn-page {% if p == page %}active{% endif %}">{{ p }}</a>
+        {% endif %}
+      {% endfor %}
+      <a href="/?page={{ page + 1 }}&tab={{ tab }}&sort={{ sort_by }}&order={{ sort_order }}#rankings" class="btn-page {% if page >= total_pages %}disabled{% endif %}">Next</a>
     </div>
+    {% endif %}
+
   </section>
 
 </main>
 
 <script>
+function applySort(field) {
+  let order = 'asc';
+  if ('{{ sort_by }}' === field) {
+    order = ('{{ sort_order }}' === 'asc') ? 'desc' : 'asc';
+  } else {
+    // Intelligent defaults
+    if (['elo', 'delta', 'speed'].includes(field)) order = 'desc';
+  }
+  const url = new URL(window.location);
+  url.searchParams.set('sort', field);
+  url.searchParams.set('order', order);
+  url.searchParams.set('page', '1');
+  window.location.href = url.toString() + '#rankings';
+}
+
 function switchTab(cat, btn) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + cat).classList.add('active');
   btn.classList.add('active');
+
+  const url = new URL(window.location);
+  url.searchParams.set('tab', cat);
+  window.history.pushState({}, '', url);
+
+  // Sync pagination links
+  document.querySelectorAll('.pagination .btn-page').forEach(link => {
+    const lUrl = new URL(link.href, window.location.origin);
+    lUrl.searchParams.set('tab', cat);
+    link.href = lUrl.toString() + '#rankings';
+  });
 }
 </script>
 
