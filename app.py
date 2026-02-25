@@ -10,8 +10,12 @@ app = Flask(__name__)
 def index():
     page = request.args.get("page", 1, type=int)
     tab = request.args.get("tab", "general")
-    sort_by = request.args.get("sort", "rank")
-    sort_order = request.args.get("order", "asc")
+    sort_lb_by = request.args.get("sort_lb", "rank")
+    sort_lb_order = request.args.get("order_lb", "asc")
+    sort_fr_by = request.args.get("sort_fr", "delta")
+    sort_fr_order = request.args.get("order_fr", "desc")
+    sort_ns_by = request.args.get("sort_ns", "rank")
+    sort_ns_order = request.args.get("order_ns", "asc")
     per_page = 50
 
     lm_data = lmarena.fetch()
@@ -26,10 +30,10 @@ def index():
         "price": "price_input",
         "speed": "speed"
     }
-    sort_key = sort_map.get(sort_by, "rank")
-    reverse = (sort_order == "desc")
 
-    def sort_list(items):
+    def sort_list(items, sort_by, sort_order):
+        sort_key = sort_map.get(sort_by, "rank")
+        reverse = (sort_order == "desc")
         # Handle None values by pushing them to the bottom
         items.sort(
             key=lambda x: (
@@ -39,14 +43,14 @@ def index():
             reverse=reverse
         )
 
-    # Apply sorting to all sections
+    # Apply sorting to all sections independently
     for cat in data["rankings"]:
-        sort_list(data["rankings"][cat])
+        sort_list(data["rankings"][cat], sort_lb_by, sort_lb_order)
     
     for cat in data["fast_risers"]:
-        sort_list(data["fast_risers"][cat])
+        sort_list(data["fast_risers"][cat], sort_fr_by, sort_fr_order)
         
-    sort_list(data["new_stars"])
+    sort_list(data["new_stars"], sort_ns_by, sort_ns_order)
 
     # Paginate rankings
     paginated_rankings = {}
@@ -60,8 +64,12 @@ def index():
     data["rankings"] = paginated_rankings
     data["page"] = page
     data["tab"] = tab
-    data["sort_by"] = sort_by
-    data["sort_order"] = sort_order
+    data["sort_lb_by"] = sort_lb_by
+    data["sort_lb_order"] = sort_lb_order
+    data["sort_fr_by"] = sort_fr_by
+    data["sort_fr_order"] = sort_fr_order
+    data["sort_ns_by"] = sort_ns_by
+    data["sort_ns_order"] = sort_ns_order
     data["per_page"] = per_page
     data["total_pages"] = (max(data["general_total"], data["coding_total"]) + per_page - 1) // per_page
 
