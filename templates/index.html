@@ -653,8 +653,11 @@
                     <th class="col-val {% if sort_ns_by == 'price' %}active-sort{% endif %}" onclick="applySort('price', 'ns')">
                       Price / 1M <span class="sort-icon">{{ '↓' if (sort_ns_by == 'price' and sort_ns_order == 'desc') else '↑' }}</span>
                     </th>
-                    <th class="col-val {% if sort_ns_by == 'speed' %}active-sort{% endif %}" onclick="applySort('speed', 'ns')">
-                      Speed <span class="sort-icon">{{ '↓' if (sort_ns_by == 'speed' and sort_ns_order == 'desc') else '↑' }}</span>
+                    <th class="col-val {% if sort_ns_by == 'volume' %}active-sort{% endif %}" onclick="applySort('volume', 'ns')">
+                      OR Volume <span class="sort-icon">{{ '↓' if (sort_ns_by == 'volume' and sort_ns_order == 'desc') else '↑' }}</span>
+                    </th>
+                    <th class="col-val {% if sort_ns_by == 'days_in_board' %}active-sort{% endif %}" onclick="applySort('days_in_board', 'ns')">
+                      Days in Board <span class="sort-icon">{{ '↓' if (sort_ns_by == 'days_in_board' and sort_ns_order == 'desc') else '↑' }}</span>
                     </th>
                   </tr>
                 </thead>
@@ -666,11 +669,12 @@
                     <td class="col-model">{{ r.model_display }}</td>
                     <td class="col-val">{{ r.elo }}</td>
                     <td class="col-val">{% if r.price_input %}${{ "%.2f"|format(r.price_input) }}{% else %}<span class="na">—</span>{% endif %}</td>
-                    <td class="col-val">{% if r.speed %}{{ r.speed|int }} <span style="font-size: 11px; color: var(--text-tertiary);">t/s</span>{% else %}<span class="na">—</span>{% endif %}</td>
+                    <td class="col-val">{% if r.or_volume %}{% if r.or_volume >= 1000000000 %}{{ "%.1f"|format(r.or_volume / 1000000000) }}B{% else %}{{ "%.1f"|format(r.or_volume / 1000000) }}M{% endif %}{% else %}<span class="na">—</span>{% endif %}</td>
+                    <td class="col-val">{% if r.days_in_board %}{{ r.days_in_board|int }} <span style="font-size: 11px; color: var(--text-tertiary);">days</span>{% else %}<span class="na">—</span>{% endif %}</td>
                   </tr>
                   {% else %}
                   <tr>
-                    <td colspan="6" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No new stars detected recently</td>
+                    <td colspan="7" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No new stars detected recently</td>
                   </tr>
                   {% endfor %}
                 </tbody>
@@ -714,8 +718,11 @@
                     <th class="col-val {% if sort_lb_by == 'price' %}active-sort{% endif %}" onclick="applySort('price', 'lb')">
                       Price / 1M <span class="sort-icon">{{ '↓' if (sort_lb_by == 'price' and sort_lb_order == 'desc') else '↑' }}</span>
                     </th>
-                    <th class="col-val {% if sort_lb_by == 'speed' %}active-sort{% endif %}" onclick="applySort('speed', 'lb')">
-                      Speed <span class="sort-icon">{{ '↓' if (sort_lb_by == 'speed' and sort_lb_order == 'desc') else '↑' }}</span>
+                    <th class="col-val {% if sort_lb_by == 'volume' %}active-sort{% endif %}" onclick="applySort('volume', 'lb')">
+                      OR Volume <span class="sort-icon">{{ '↓' if (sort_lb_by == 'volume' and sort_lb_order == 'desc') else '↑' }}</span>
+                    </th>
+                    <th class="col-val {% if sort_lb_by == 'days_in_board' %}active-sort{% endif %}" onclick="applySort('days_in_board', 'lb')">
+                      Days in Board <span class="sort-icon">{{ '↓' if (sort_lb_by == 'days_in_board' and sort_lb_order == 'desc') else '↑' }}</span>
                     </th>
                   </tr>
                 </thead>
@@ -739,11 +746,12 @@
                       {% endif %}
                     </td>
                     <td class="col-val">{% if r.price_input %}${{ "%.2f"|format(r.price_input) }}{% else %}<span class="na">—</span>{% endif %}</td>
-                    <td class="col-val">{% if r.speed %}{{ r.speed|int }} <span style="font-size: 11px; color: var(--text-tertiary);">t/s</span>{% else %}<span class="na">—</span>{% endif %}</td>
+                    <td class="col-val">{% if r.or_volume %}{% if r.or_volume >= 1000000000 %}{{ "%.1f"|format(r.or_volume / 1000000000) }}B{% else %}{{ "%.1f"|format(r.or_volume / 1000000) }}M{% endif %}{% else %}<span class="na">—</span>{% endif %}</td>
+                    <td class="col-val">{% if r.days_in_board %}{{ r.days_in_board|int }} <span style="font-size: 11px; color: var(--text-tertiary);">days</span>{% else %}<span class="na">—</span>{% endif %}</td>
                   </tr>
                   {% else %}
                   <tr>
-                    <td colspan="6" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No rankings available</td>
+                    <td colspan="7" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No rankings available</td>
                   </tr>
                   {% endfor %}
                 </tbody>
@@ -924,7 +932,7 @@ function applySort(field, section) {
   if (currentSort[section].by === field) {
     order = (currentSort[section].order === 'asc') ? 'desc' : 'asc';
   } else {
-    if (['elo', 'delta', 'speed'].includes(field)) order = 'desc';
+    if (['elo', 'delta', 'days_in_board', 'volume'].includes(field)) order = 'desc';
   }
 
   const url = new URL(window.location);

@@ -33,18 +33,16 @@ def index():
         "elo": "elo",
         "delta": "rank_delta",
         "price": "price_input",
-        "speed": "speed"
+        "days_in_board": "days_in_board",
+        "volume": "or_volume"
     }
 
     def sort_list(items, sort_by, sort_order):
         sort_key = sort_map.get(sort_by, "rank")
         reverse = (sort_order == "desc")
-        # Handle None values by pushing them to the bottom
+        
         items.sort(
-            key=lambda x: (
-                x.get(sort_key) is None, 
-                x.get(sort_key) if x.get(sort_key) is not None else (float('-inf') if reverse else float('inf'))
-            ),
+            key=lambda x: x.get(sort_key) if x.get(sort_key) is not None else (-float('inf') if reverse else float('inf')),
             reverse=reverse
         )
 

@@ -16,7 +16,7 @@ Local dashboard tracking fast risers and new stars on the [LM Arena leaderboard]
 | [Wayback Machine](https://web.archive.org) | Historical rank snapshots for 7d/30d deltas | Scraped |
 | [OpenRouter](https://openrouter.ai) | Price/1M tokens (input + output), weekly usage rank | Free API + page scrape |
 
-> **Note:** Speed (tok/s) requires an [Artificial Analysis API key](https://artificialanalysis.ai/api-access-preview) — not included.
+> **Note:** Days in Board is calculated using the creation timestamp from the OpenRouter API.
 
 ## Setup
 

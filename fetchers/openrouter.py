@@ -65,12 +65,13 @@ def _fetch_pricing() -> dict[str, dict]:
             result[mid.lower()] = {
                 "price_input": round(price_in, 4),
                 "price_output": round(price_out, 4),
+                "created": m.get("created"),
             }
     return result
 
 
-def _fetch_usage_ranks() -> dict[str, int]:
-    """Return {model_id: rank} from latest week's token usage on OR rankings page."""
+def _fetch_usage_ranks() -> dict[str, dict[str, float]]:
+    """Return {model_id: {"rank": rank, "tokens": tokens}} from latest week's token usage on OR rankings page."""
     try:
         r = requests.get(OR_RANKINGS_URL, timeout=20, headers=HEADERS)
         r.raise_for_status()
@@ -102,7 +103,7 @@ def _fetch_usage_ranks() -> dict[str, int]:
         ((k, v) for k, v in ys.items() if k.lower() != "others"),
         key=lambda x: -x[1],
     )
-    return {m.lower(): rank for rank, (m, _) in enumerate(sorted_models, start=1)}
+    return {m.lower(): {"rank": rank, "tokens": tokens} for rank, (m, tokens) in enumerate(sorted_models, start=1)}
 
 
 def fetch() -> dict:

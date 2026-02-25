@@ -1,6 +1,7 @@
 """Compute fast risers, new stars, and merged signal rows from raw data."""
 from __future__ import annotations
 import re
+import time
 from datetime import datetime
 from typing import Optional
 
@@ -68,18 +69,18 @@ def _find_pricing(model_id: str, pricing: dict) -> dict:
     return best if best_score >= 0.5 else {}
 
 
-def _find_usage_rank(model_id: str, usage_ranks: dict) -> Optional[int]:
-    """Match lmarena model_id to OR usage ranks (keyed by 'provider/slug')."""
+def _find_usage_info(model_id: str, usage_ranks: dict) -> Optional[dict]:
+    """Match lmarena model_id to OR usage info (keyed by 'provider/slug')."""
     key = _norm(model_id)
     ktok = _tokens(model_id)
     best, best_score = None, 0.0
-    for or_id, rank in usage_ranks.items():
+    for or_id, info in usage_ranks.items():
         nk = _norm(or_id)
         if nk == key:
-            return rank
+            return info
         score = _token_overlap(ktok, _tokens(or_id))
         if score > best_score:
-            best, best_score = rank, score
+            best, best_score = info, score
     return best if best_score >= 0.5 else None
 
 
@@ -130,7 +131,13 @@ def analyze(lmarena: dict, aa: dict, or_data: dict) -> dict:
             rank_delta = (prev_rank_7d - row["rank"]) if prev_rank_7d is not None else None
 
             price_info = _find_pricing(mid, pricing)
-            or_rank = _find_usage_rank(mid, usage_ranks)
+            _ui = _find_usage_info(mid, usage_ranks)
+            usage_info = _ui if isinstance(_ui, dict) else {}
+            or_rank = usage_info.get("rank")
+            or_volume = usage_info.get("tokens")
+            
+            created_ts = price_info.get("created")
+            days_in_board = int((time.time() - created_ts) / 86400) if created_ts else None
 
             merged.append({
                 "model_id": mid,
@@ -142,8 +149,9 @@ def analyze(lmarena: dict, aa: dict, or_data: dict) -> dict:
                 "rank_delta": rank_delta,    # positive = riser (7d)
                 "price_input": price_info.get("price_input"),
                 "price_output": price_info.get("price_output"),
-                "speed": None,               # requires AA API key
+                "days_in_board": days_in_board,
                 "or_rank": or_rank,
+                "or_volume": or_volume,
                 "is_riser": False,
                 "is_new_star": False,
                 "lab": get_lab_from_model_id(mid),
