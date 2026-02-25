@@ -410,12 +410,59 @@
     }
 
     .insights-body {
-      white-space: pre-wrap;
-      font-family: inherit;
       font-size: 14px;
-      line-height: 1.7;
+      line-height: 1.6;
       color: var(--text-secondary);
-      padding: 20px;
+      padding: 24px;
+    }
+
+    .insights-body h1, .insights-body h2, .insights-body h3 {
+      color: var(--text-main);
+      margin-top: 1.5em;
+      margin-bottom: 0.75em;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    
+    .insights-body h1:first-child, .insights-body h2:first-child, .insights-body h3:first-child {
+      margin-top: 0;
+    }
+
+    .insights-body p {
+      margin-bottom: 1em;
+    }
+    
+    .insights-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .insights-body ul, .insights-body ol {
+      margin-bottom: 1em;
+      padding-left: 24px;
+    }
+
+    .insights-body li {
+      margin-bottom: 0.5em;
+    }
+
+    .insights-body strong, .insights-body b {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+    
+    .insights-body a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .insights-body a:hover {
+      text-decoration: underline;
+    }
+    
+    .insights-body hr {
+      border: 0;
+      border-top: 1px solid var(--border);
+      margin: 1.5em 0;
     }
 
     .insights-placeholder {
@@ -443,6 +490,7 @@
     }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
 
@@ -588,10 +636,17 @@
       <button class="btn-refresh" id="insights-btn" onclick="refreshInsights()">Refresh</button>
     </div>
     <div class="card" id="insights-card">
+      <div class="insights-placeholder" id="insights-text">
+        {% if ai_insights %}
+        Loading analysis...
+        {% else %}
+        No analysis cached — click Refresh to generate
+        {% endif %}
+      </div>
       {% if ai_insights %}
-      <pre class="insights-body" id="insights-text">{{ ai_insights }}</pre>
-      {% else %}
-      <div class="insights-placeholder" id="insights-text">No analysis cached — click Refresh to generate</div>
+      <script type="application/json" id="initial-insights-data">
+        {{ ai_insights|tojson|safe }}
+      </script>
       {% endif %}
     </div>
   </section>
@@ -831,7 +886,17 @@ function applySort(field, section) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (!{{ 'true' if ai_insights else 'false' }}) {
+  const initialDataEl = document.getElementById('initial-insights-data');
+  if (initialDataEl) {
+    try {
+      const insightsText = JSON.parse(initialDataEl.textContent);
+      const textEl = document.getElementById('insights-text');
+      textEl.innerHTML = marked.parse(insightsText);
+      textEl.className = 'insights-body';
+    } catch (e) {
+      console.error("Failed to parse initial insights:", e);
+    }
+  } else if (!{{ 'true' if ai_insights else 'false' }}) {
     refreshInsights();
   }
 });
@@ -847,7 +912,7 @@ async function refreshInsights() {
     const resp = await fetch('/ai-insights', { method: 'POST' });
     const data = await resp.json();
     if (data.status === 'ok') {
-      textEl.textContent = data.text;
+      textEl.innerHTML = marked.parse(data.text);
       textEl.className = 'insights-body';
     } else {
       textEl.textContent = 'Error: ' + data.text;
