@@ -508,6 +508,44 @@
       text-align: center;
     }
 
+    /* Lab avatars */
+    .lab-avatar-container {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      position: relative;
+      vertical-align: middle;
+    }
+    .lab-logo {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      object-fit: contain;
+      background: #fff;
+      padding: 2px;
+    }
+    .lab-avatar {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #fff;
+      background: var(--border);
+      flex-shrink: 0;
+      letter-spacing: 0;
+    }
+    .col-avatar {
+      width: 36px;
+      text-align: center;
+      padding-right: 4px;
+    }
+
     /* Elegant scrollbar for Tokyo Night */
     ::-webkit-scrollbar {
       width: 10px;
@@ -590,6 +628,7 @@
                 <thead>
                   <tr>
                     <th class="col-rank">#</th>
+                    <th class="col-avatar"></th>
                     <th class="{% if sort_fr_by == 'rank' %}active-sort{% endif %}" onclick="applySort('rank', 'fr')">
                       Model <span class="sort-icon">{{ '↓' if (sort_fr_by == 'rank' and sort_fr_order == 'desc') else '↑' }}</span>
                     </th>
@@ -605,13 +644,21 @@
                   {% for r in fast_risers[win][cat_key] %}
                   <tr class="{% if r.rank <= 3 %}top3{% endif %}">
                     <td class="col-rank"><span class="rank-num">{{ r.rank }}</span></td>
+                    <td class="col-avatar">
+                      <div class="lab-avatar-container">
+                        {% if r.lab_logo %}
+                          <img src="{{ r.lab_logo }}" class="lab-logo" alt="{{ r.lab }}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        {% endif %}
+                        <span class="lab-avatar" data-lab="{{ r.lab }}" {% if r.lab_logo %}style="display:none;"{% endif %}>{{ r.lab[0] }}</span>
+                      </div>
+                    </td>
                     <td class="col-model" title="{{ r.model_display }}">{{ r.model_display }}</td>
                     <td class="col-delta text-green">↑{{ r.rank_delta }}</td>
                     <td class="col-val">{{ r.elo }}</td>
                   </tr>
                   {% else %}
                   <tr>
-                    <td colspan="4" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No significant risers yet</td>
+                    <td colspan="5" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No significant risers yet</td>
                   </tr>
                   {% endfor %}
                 </tbody>
@@ -644,6 +691,7 @@
                   <tr>
                     <th style="width: 80px">Category</th>
                     <th class="col-rank">Rank</th>
+                    <th class="col-avatar"></th>
                     <th class="{% if sort_ns_by == 'rank' %}active-sort{% endif %}" onclick="applySort('rank', 'ns')">
                       Model <span class="sort-icon">{{ '↓' if (sort_ns_by == 'rank' and sort_ns_order == 'desc') else '↑' }}</span>
                     </th>
@@ -666,6 +714,14 @@
                   <tr class="{% if r.rank <= 3 %}top3{% endif %}">
                     <td class="cat-label">{{ r.category }}</td>
                     <td class="col-rank"><span class="rank-num">{{ r.rank }}</span></td>
+                    <td class="col-avatar">
+                      <div class="lab-avatar-container">
+                        {% if r.lab_logo %}
+                          <img src="{{ r.lab_logo }}" class="lab-logo" alt="{{ r.lab }}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        {% endif %}
+                        <span class="lab-avatar" data-lab="{{ r.lab }}" {% if r.lab_logo %}style="display:none;"{% endif %}>{{ r.lab[0] }}</span>
+                      </div>
+                    </td>
                     <td class="col-model">{{ r.model_display }}</td>
                     <td class="col-val">{{ r.elo }}</td>
                     <td class="col-val">{% if r.price_input %}${{ "%.2f"|format(r.price_input) }}{% else %}<span class="na">—</span>{% endif %}</td>
@@ -674,7 +730,7 @@
                   </tr>
                   {% else %}
                   <tr>
-                    <td colspan="7" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No new stars detected recently</td>
+                    <td colspan="8" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No new stars detected recently</td>
                   </tr>
                   {% endfor %}
                 </tbody>
@@ -708,6 +764,7 @@
                     <th class="col-rank {% if sort_lb_by == 'rank' %}active-sort{% endif %}" onclick="applySort('rank', 'lb')">
                       Rank <span class="sort-icon">{{ '↓' if (sort_lb_by == 'rank' and sort_lb_order == 'desc') else '↑' }}</span>
                     </th>
+                    <th class="col-avatar"></th>
                     <th>Model</th>
                     <th class="col-val {% if sort_lb_by == 'elo' %}active-sort{% endif %}" onclick="applySort('elo', 'lb')">
                       ELO <span class="sort-icon">{{ '↓' if (sort_lb_by == 'elo' and sort_lb_order == 'desc') else '↑' }}</span>
@@ -730,6 +787,14 @@
                   {% for r in rankings[cat_key] %}
                   <tr class="{% if r.rank <= 3 %}top3{% endif %}">
                     <td class="col-rank"><span class="rank-num">{{ r.rank }}</span></td>
+                    <td class="col-avatar">
+                      <div class="lab-avatar-container">
+                        {% if r.lab_logo %}
+                          <img src="{{ r.lab_logo }}" class="lab-logo" alt="{{ r.lab }}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        {% endif %}
+                        <span class="lab-avatar" data-lab="{{ r.lab }}" {% if r.lab_logo %}style="display:none;"{% endif %}>{{ r.lab[0] }}</span>
+                      </div>
+                    </td>
                     <td class="col-model">
                       {{ r.model_display }}
                       {% if r.is_new_star %}<span class="tag tag-new">New</span>{% endif %}
@@ -751,7 +816,7 @@
                   </tr>
                   {% else %}
                   <tr>
-                    <td colspan="7" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No rankings available</td>
+                    <td colspan="8" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No rankings available</td>
                   </tr>
                   {% endfor %}
                 </tbody>
@@ -812,7 +877,15 @@
                     <td style="font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em;">{{ label }}</td>
                     {% if m %}
                     <td class="col-model" title="{{ m.model_id }}">{{ m.model_display }}</td>
-                    <td style="color: var(--text-tertiary); font-size: 12px;">{{ m.lab }}</td>
+                    <td style="color: var(--text-tertiary); font-size: 12px; display: flex; align-items: center; gap: 6px;">
+                      <div class="lab-avatar-container" style="width: 18px; height: 18px;">
+                        {% if m.lab_logo %}
+                          <img src="{{ m.lab_logo }}" class="lab-logo" style="width: 18px; height: 18px;" alt="{{ m.lab }}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        {% endif %}
+                        <span class="lab-avatar" data-lab="{{ m.lab }}" style="width: 18px; height: 18px; font-size: 9px; {% if m.lab_logo %}display:none;{% endif %}">{{ m.lab[0] }}</span>
+                      </div>
+                      {{ m.lab }}
+                    </td>
                     <td class="col-val">{{ m.elo }}</td>
                     <td class="col-val">{% if m.price_input %}${{ "%.2f"|format(m.price_input) }}{% else %}<span class="na">—</span>{% endif %}</td>
                     {% else %}
@@ -849,7 +922,15 @@
                     <td style="font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em;">{{ label }}</td>
                     {% if m %}
                     <td class="col-model" title="{{ m.model_id }}">{{ m.model_display }}</td>
-                    <td style="color: var(--text-tertiary); font-size: 12px;">{{ m.lab }}</td>
+                    <td style="color: var(--text-tertiary); font-size: 12px; display: flex; align-items: center; gap: 6px;">
+                      <div class="lab-avatar-container" style="width: 18px; height: 18px;">
+                        {% if m.lab_logo %}
+                          <img src="{{ m.lab_logo }}" class="lab-logo" style="width: 18px; height: 18px;" alt="{{ m.lab }}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        {% endif %}
+                        <span class="lab-avatar" data-lab="{{ m.lab }}" style="width: 18px; height: 18px; font-size: 9px; {% if m.lab_logo %}display:none;{% endif %}">{{ m.lab[0] }}</span>
+                      </div>
+                      {{ m.lab }}
+                    </td>
                     <td class="col-val">{{ m.elo }}</td>
                     <td class="col-val">{% if m.price_input %}${{ "%.2f"|format(m.price_input) }}{% else %}<span class="na">—</span>{% endif %}</td>
                     {% else %}
@@ -891,7 +972,15 @@
               <tbody>
                 {% for entry in company_momentum %}
                 <tr>
-                  <td class="col-model">{{ entry.lab }}</td>
+                  <td class="col-model" style="display: flex; align-items: center; gap: 8px;">
+                    <div class="lab-avatar-container">
+                      {% if entry.lab_logo %}
+                        <img src="{{ entry.lab_logo }}" class="lab-logo" alt="{{ entry.lab }}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                      {% endif %}
+                      <span class="lab-avatar" data-lab="{{ entry.lab }}" {% if entry.lab_logo %}style="display:none;"{% endif %}>{{ entry.lab[0] }}</span>
+                    </div>
+                    {{ entry.lab }}
+                  </td>
                   <td class="col-val"><span class="score-pill">{{ entry.momentum_score }}</span></td>
                   <td class="col-val">{{ entry.fast_risers or '—' }}</td>
                   <td class="col-val">{{ entry.new_stars or '—' }}</td>
@@ -916,6 +1005,27 @@
 </main>
 
 <script>
+const LAB_COLORS = {
+  'Anthropic':  '#e07b39',
+  'OpenAI':     '#10a37f',
+  'Google':     '#4285f4',
+  'xAI':        '#888fa8',
+  'NVIDIA':     '#76b900',
+  'Meta':       '#1877f2',
+  'Mistral':    '#f97316',
+  'DeepSeek':   '#536dfe',
+  'Alibaba':    '#ff6900',
+  'Microsoft':  '#00a4ef',
+  'Cohere':     '#d4432c',
+  'Moonshot':   '#7c3aed',
+  'Zhipu':      '#cc0000',
+  'IBM':        '#054ada',
+  'AI2':        '#6d28d9',
+  'AI21 Labs':  '#f59e0b',
+  '01.AI':      '#64748b',
+  'ByteDance':  '#fe2c55',
+};
+
 // Expose the current states from jinja to JS
 const currentSort = {
   lb: { by: '{{ sort_lb_by }}', order: '{{ sort_lb_order }}' },
@@ -952,6 +1062,11 @@ function applySort(field, section) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.lab-avatar[data-lab]').forEach(el => {
+    const color = LAB_COLORS[el.dataset.lab] || '#565f89';
+    el.style.background = color;
+  });
+
   const initialDataEl = document.getElementById('initial-insights-data');
   if (initialDataEl) {
     try {

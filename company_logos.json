@@ -1,0 +1,23 @@
+{
+  "Anthropic": "/static/logos/anthropic.png",
+  "OpenAI": "/static/logos/openai.png",
+  "Google": "/static/logos/google.png",
+  "xAI": "/static/logos/xai.png",
+  "NVIDIA": "/static/logos/nvidia.png",
+  "Meta": "/static/logos/meta.png",
+  "Mistral": "/static/logos/mistral.png",
+  "DeepSeek": "/static/logos/deepseek.png",
+  "Alibaba": "/static/logos/alibaba.png",
+  "Microsoft": "/static/logos/microsoft.png",
+  "Cohere": "/static/logos/cohere.png",
+  "Moonshot": "/static/logos/moonshot.png",
+  "Zhipu": "/static/logos/zhipu.png",
+  "IBM": "/static/logos/ibm.png",
+  "AI2": "/static/logos/ai2.png",
+  "AI21 Labs": "/static/logos/ai21_labs.png",
+  "01.AI": "/static/logos/01_ai.png",
+  "ByteDance": "/static/logos/bytedance.png",
+  "MiniMax": "/static/logos/minimax.png",
+  "Baidu": "/static/logos/baidu.png",
+  "Adept AI": "/static/logos/adept_ai.png"
+}

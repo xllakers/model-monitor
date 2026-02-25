@@ -4,13 +4,13 @@ import re
 import time
 from datetime import datetime
 from typing import Optional
-
+import logos
 
 def get_lab_from_model_id(model_id: str) -> str:
     mid = model_id.split("/", 1)[-1].lower()
     RULES = [
         ("claude", "Anthropic"), ("gpt", "OpenAI"), ("o1", "OpenAI"), ("o3", "OpenAI"),
-        ("chatgpt", "OpenAI"), ("gemini", "Google"), ("gemma", "Google"), ("grok", "xAI"),
+        ("chatgpt", "OpenAI"), ("gemini", "Google"), ("gemma", "Google"), ("grok", "xAI"), ("dola", "ByteDance"),
         ("llama-3.1-nemotron", "NVIDIA"), ("llama-3.3-nemotron", "NVIDIA"),
         ("nemotron", "NVIDIA"), ("llama", "Meta"), ("mistral", "Mistral"),
         ("mixtral", "Mistral"), ("ministral", "Mistral"), ("deepseek", "DeepSeek"),
@@ -18,6 +18,8 @@ def get_lab_from_model_id(model_id: str) -> str:
         ("command", "Cohere"), ("kimi", "Moonshot"), ("glm", "Zhipu"),
         ("granite", "IBM"), ("olmo", "AI2"), ("molmo", "AI2"),
         ("jamba", "AI21 Labs"), ("yi", "01.AI"),
+        ("minimax", "MiniMax"), ("abab", "MiniMax"),
+        ("ernie", "Baidu"),
     ]
     for prefix, lab in RULES:
         if mid.startswith(prefix):
@@ -155,6 +157,7 @@ def analyze(lmarena: dict, aa: dict, or_data: dict) -> dict:
                 "is_riser": False,
                 "is_new_star": False,
                 "lab": get_lab_from_model_id(mid),
+                "lab_logo": logos.get_logo(get_lab_from_model_id(mid)),
                 "is_open_source": get_is_open_source(mid),
             })
 
@@ -206,6 +209,7 @@ def get_company_momentum(analysis_result: dict, window: str = "7d") -> list:
         if lab not in labs:
             labs[lab] = {
                 "lab": lab,
+                "lab_logo": logos.get_logo(lab),
                 "top30_general": 0,
                 "top30_coding": 0,
                 "fast_risers": 0,

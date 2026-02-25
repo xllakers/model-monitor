@@ -3,3 +3,7 @@ __pycache__/
 *.pyc
 .env
 venv/
+
+# Keep static logos and metadata
+!static/logos/*.png
+!company_logos.json
