@@ -169,21 +169,49 @@ def analyze(lmarena: dict, aa: dict, or_data: dict) -> dict:
             ("7d",  prev_7d_by_id,  previous_7d),
             ("30d", prev_30d_by_id, previous_30d),
         ]:
-            risers = [
-                {**r, "rank_delta": prev_by_id[r["model_id"]] - r["rank"]}
-                for r in merged
-                if r["model_id"] in prev_by_id
-                and prev_by_id[r["model_id"]] - r["rank"] > 0
-            ]
-            risers.sort(key=lambda x: -x["rank_delta"])
-            fast_risers[window][cat] = risers[:10]
-
-            top50 = {r["model_id"] for r in prev_rows_w.get(cat, []) if r["rank"] <= 50}
+            # Build a map of previous scores for ELO delta
+            prev_scores = {r["model_id"]: r["score"] for r in (prev_rows_w.get(cat, []) if isinstance(prev_rows_w, dict) else [])}
+            
+            risers = []
             for r in merged:
-                if r["rank"] <= 30 and r["model_id"] not in top50 and top50:
-                    if window == "7d":
-                        r["is_new_star"] = True
-                    new_stars[window][cat].append({**r, "category": cat})
+                mid = r["model_id"]
+                
+                # Case A: Existing model climbing
+                if mid in prev_by_id:
+                    rank_delta = prev_by_id[mid] - r["rank"]
+                    elo_delta = (r["elo"] - prev_scores.get(mid, 0)) if mid in prev_scores else 0
+                    
+                    # Threshold for existing: move 2+ spots, OR 1+ spot in Top 10, OR gain 15+ ELO
+                    if rank_delta >= (1 if r["rank"] <= 10 else 2) or elo_delta >= 15:
+                        risers.append({
+                            **r, 
+                            "rank_delta": rank_delta, 
+                            "elo_delta": elo_delta,
+                            "is_debut": False
+                        })
+                
+                # Case B: New model debut (Rising from 'unranked' to Top 100)
+                elif r["rank"] <= 100 and prev_by_id: # Only if we have baseline data to compare to
+                    risers.append({
+                        **r, 
+                        "rank_delta": (101 - r["rank"]), # Proxy delta
+                        "elo_delta": 0,
+                        "is_debut": True
+                    })
+            
+            # Sort: Debuts first (highest momentum), then by rank delta
+            risers.sort(key=lambda x: (x["is_debut"], x["rank_delta"]), reverse=True)
+            fast_risers[window][cat] = risers[:12] # Show more to be useful
+
+            # New Stars: models that entered the top 30 from outside top 50
+            prev_list = prev_rows_w.get(cat, []) if isinstance(prev_rows_w, dict) else []
+            top50 = {r["model_id"] for r in prev_list if r["rank"] <= 50}
+            if prev_list:
+                for r in merged:
+                    if r["rank"] <= 30 and r["model_id"] not in top50:
+                        if window == "7d":
+                            r["is_new_star"] = True
+                        new_stars[window][cat].append({**r, "category": cat})
 
         # Mark is_riser on merged rows from 7d window
         riser_ids_7d = {r["model_id"] for r in fast_risers["7d"].get(cat, [])}

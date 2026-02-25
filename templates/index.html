@@ -58,12 +58,12 @@
       background: var(--glass-bg);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
-      padding: 10px 24px;
+      padding: 6px 8px 6px 20px;
       border-radius: 9999px;
       border: 1px solid var(--glass-border);
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 20px;
       box-shadow: var(--shadow-glass);
       transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     }
@@ -75,18 +75,20 @@
     }
 
     .nav-pill h1 { 
-      font-size: 15px; 
+      font-size: 14px; 
       font-weight: 700; 
       letter-spacing: -0.01em;
       color: var(--accent);
+      white-space: nowrap;
     }
     
     .nav-meta { 
-      font-size: 12px; 
-      color: var(--text-secondary); 
+      font-size: 11px; 
+      color: var(--text-tertiary); 
       display: flex;
       align-items: center;
       gap: 8px;
+      margin-right: 4px;
     }
 
     /* Main Layout */
@@ -542,6 +544,10 @@
   <div class="nav-pill">
     <h1>LLM Monitor</h1>
     <div class="nav-meta">{{ last_updated }}</div>
+    <div class="tabs" style="margin-left: 8px;">
+      <button class="tab {% if tab == 'general' %}active{% endif %}" data-cat="general" onclick="switchTab('general')">General</button>
+      <button class="tab {% if tab == 'coding' %}active{% endif %}" data-cat="coding" onclick="switchTab('coding')">Coding</button>
+    </div>
   </div>
 </header>
 
@@ -583,10 +589,6 @@
             <button class="tab active" data-win="7d" onclick="switchFrWin('7d')">7d</button>
             <button class="tab" data-win="30d" onclick="switchFrWin('30d')">30d</button>
           </div>
-          <div class="tabs">
-            <button class="tab {% if tab == 'general' %}active{% endif %}" data-cat="general" onclick="switchTab('general')">General</button>
-            <button class="tab {% if tab == 'coding' %}active{% endif %}" data-cat="coding" onclick="switchTab('coding')">Coding</button>
-          </div>
         </div>
       </summary>
       <div class="section-content">
@@ -623,7 +625,16 @@
                       </div>
                     </td>
                     <td class="col-model" title="{{ r.model_display }}">{{ r.model_display }}</td>
-                    <td class="col-delta text-green">↑{{ r.rank_delta }}</td>
+                    <td class="col-delta text-green">
+                      {% if r.is_debut %}
+                        <span class="tag tag-new" style="margin-left:0;">DEBUT</span>
+                      {% else %}
+                        ↑{{ r.rank_delta }}
+                        {% if r.elo_delta and r.elo_delta >= 5 %}
+                          <span style="font-size: 11px; opacity: 0.8;">(+{{ r.elo_delta|int }})</span>
+                        {% endif %}
+                      {% endif %}
+                    </td>
                     <td class="col-val">{{ r.elo }}</td>
                   </tr>
                   {% else %}
@@ -650,10 +661,6 @@
           <div class="tabs" id="ns-win">
             <button class="tab active" data-win="7d" onclick="switchNsWin('7d')">7d</button>
             <button class="tab" data-win="30d" onclick="switchNsWin('30d')">30d</button>
-          </div>
-          <div class="tabs">
-            <button class="tab {% if tab == 'general' %}active{% endif %}" data-cat="general" onclick="switchTab('general')">General</button>
-            <button class="tab {% if tab == 'coding' %}active{% endif %}" data-cat="coding" onclick="switchTab('coding')">Coding</button>
           </div>
         </div>
       </summary>
@@ -726,10 +733,6 @@
     <details open>
       <summary class="section-header">
         <h2><span class="fold-icon">▼</span> Leaderboard</h2>
-        <div class="tabs" onclick="event.preventDefault(); event.stopPropagation();">
-          <button class="tab {% if tab == 'general' %}active{% endif %}" data-cat="general" onclick="switchTab('general')">General</button>
-          <button class="tab {% if tab == 'coding' %}active{% endif %}" data-cat="coding" onclick="switchTab('coding')">Coding</button>
-        </div>
       </summary>
       <div class="section-content">
         <div class="card">

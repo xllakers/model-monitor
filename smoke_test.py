@@ -15,7 +15,8 @@ for cat in ("general", "coding"):
     for r in rows[:3]:
         print(f"  #{r['rank']} {r['model_id']} score={r['score']}")
 
-print("\nRunning analyzer...")
+print("
+Running analyzer...")
 result = analyze(data, {}, {})
 
 for win in ("7d", "30d"):
@@ -28,12 +29,15 @@ for win in ("7d", "30d"):
 print(f"General rankings:    {len(result['rankings']['general'])} models")
 print(f"Last updated:        {result['last_updated']}")
 
-print("\nTop 5 general:")
+print("
+Top 5 general:")
 for r in result['rankings']['general'][:5]:
     print(f"  #{r['rank']} {r['model_id']} ELO={r['elo']}")
 
-print("\nTop 5 coding:")
+print("
+Top 5 coding:")
 for r in result['rankings']['coding'][:5]:
     print(f"  #{r['rank']} {r['model_id']} ELO={r['elo']}")
 
-print("\nOK")
+print("
+OK")
