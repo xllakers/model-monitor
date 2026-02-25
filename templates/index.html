@@ -617,6 +617,9 @@
                     <th class="col-val {% if sort_fr_by == 'elo' %}active-sort{% endif %}" onclick="applySort('elo', 'fr')">
                       ELO <span class="sort-icon">{{ '↓' if (sort_fr_by == 'elo' and sort_fr_order == 'desc') else '↑' }}</span>
                     </th>
+                    <th class="col-val {% if sort_fr_by == 'days_in_board' %}active-sort{% endif %}" onclick="applySort('days_in_board', 'fr')">
+                      Days <span class="sort-icon">{{ '↓' if (sort_fr_by == 'days_in_board' and sort_fr_order == 'desc') else '↑' }}</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -646,10 +649,11 @@
                       {% endif %}
                     </td>
                     <td class="col-val">{{ r.elo }}</td>
+                    <td class="col-val">{% if r.days_in_board %}{{ r.days_in_board|int }}<span style="font-size: 11px; color: var(--text-tertiary);">d</span>{% else %}<span class="na">—</span>{% endif %}</td>
                   </tr>
                   {% else %}
                   <tr>
-                    <td colspan="5" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No significant risers yet</td>
+                    <td colspan="6" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No significant risers yet</td>
                   </tr>
                   {% endfor %}
                 </tbody>
