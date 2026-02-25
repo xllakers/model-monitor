@@ -43,20 +43,19 @@ def _fmt_ctx(c) -> str:
     return f"{c//1_000}k"
 
 
-def _fmt_rev(r) -> str:
-    if not r:
-        return "N/A"
-    if r >= 1_000_000:
-        return f"${r/1_000_000:.1f}M/wk"
-    if r >= 1_000:
-        return f"${r/1_000:.0f}K/wk"
-    return f"${r:.0f}/wk"
-
-
-def prepare_summary(analysis_result: dict, company_scorecard: list, model_picks: dict) -> str:
+def prepare_summary(analysis_result: dict) -> str:
     lines = ["# LLM Arena Snapshot\n"]
 
-    lines.append("## Fast Risers (top 5, 7d window)")
+    lines.append("## Top Rankings (Top 15)")
+    for cat in ("general", "coding"):
+        lines.append(f"### {cat.title()}")
+        for r in analysis_result["rankings"].get(cat, [])[:15]:
+            or_str = f", OR vol {_fmt_vol(r.get('or_volume'))}" if r.get("or_volume") else ""
+            price = f", ${r['price_input']:.2f}/1M" if r.get("price_input") else ""
+            ctx = f", ctx {_fmt_ctx(r.get('context_length'))}" if r.get("context_length") else ""
+            lines.append(f"- {r['model_display']} ({r['lab']}) rank {r['rank']}, ELO {r['elo']}{or_str}{price}{ctx}")
+
+    lines.append("\n## Fast Risers (top 5, 7d window)")
     for cat in ("general", "coding"):
         lines.append(f"### {cat.title()}")
         for r in analysis_result["fast_risers"]["7d"].get(cat, [])[:5]:
@@ -68,44 +67,6 @@ def prepare_summary(analysis_result: dict, company_scorecard: list, model_picks:
         or_str = f", OR vol {_fmt_vol(r.get('or_volume'))}" if r.get("or_volume") else ""
         lines.append(f"- [{r['category']}] {r['model_display']} ({r['lab']}) rank {r['rank']}, ELO {r['elo']}{or_str}")
 
-    lines.append("\n## Company Scorecard (top 8)")
-    for entry in company_scorecard[:8]:
-        mkt = f"{entry.get('market_share_pct', 0):.1f}%"
-        rev = _fmt_rev(entry.get("revenue_proxy"))
-        top10 = f"{entry.get('top10_general', 0)}G/{entry.get('top10_coding', 0)}C"
-        top30 = f"{entry.get('top30_general', 0)}G/{entry.get('top30_coding', 0)}C"
-        oss_prop = f"{entry.get('oss_count', 0)} OSS / {entry.get('proprietary_count', 0)} prop"
-        leader = " [CATEGORY LEADER]" if entry.get("category_leader") else ""
-        lines.append(
-            f"- {entry['lab']}: invest_score={entry.get('investment_score', 0)} "
-            f"mkt_share={mkt} rev={rev} top10={top10} top30={top30} "
-            f"portfolio={oss_prop} momentum={entry.get('momentum_score', 0)}"
-            f" best_rank={entry['best_rank']} [{entry['top_model']}]{leader}"
-        )
-
-    lines.append("\n## Model Picks")
-    pick_labels = [
-        ("best_cloud",        "Best Overall Cloud"),
-        ("best_oss",          "Best Overall OSS"),
-        ("best_value_cloud",  "Best Value Cloud"),
-        ("best_value_oss",    "Best Value OSS"),
-        ("best_coding_cloud", "Best Coding Cloud"),
-        ("best_coding_oss",   "Best Coding OSS"),
-        ("best_long_ctx_cloud", "Best Long Context Cloud"),
-        ("best_long_ctx_oss",   "Best Long Context OSS"),
-        ("most_adopted_cloud",  "Most Adopted Cloud"),
-        ("most_adopted_oss",    "Most Adopted OSS"),
-    ]
-    for key, label in pick_labels:
-        m = model_picks.get(key)
-        ru = model_picks.get(key + "_ru")
-        if m:
-            price = f"${m['price_input']:.2f}/1M" if m.get("price_input") else "N/A"
-            ctx = _fmt_ctx(m.get("context_length"))
-            vol = _fmt_vol(m.get("or_volume"))
-            ru_str = f" (runner-up: {ru['model_display']})" if ru else ""
-            lines.append(f"- {label}: {m['model_display']} ({m['lab']}) ELO={m['elo']} price={price} ctx={ctx} vol={vol}{ru_str}")
-
     return "\n".join(lines)
 
 
@@ -113,22 +74,20 @@ def get_ai_insights(summary: str) -> str | None:
     prompt = (
         summary
         + "\n\n---\n"
-        "Data: Arena ELO (quality), OpenRouter (OR) volume (real-world adoption), "
-        "market share (% of OR tokens), revenue proxy (volume × price), context_length.\n\n"
-        "Provide exactly 3 sections:\n\n"
-        "## 1. Model Recommendations\n"
-        "For each scenario below, name the pick and explain in 1 sentence why:\n"
-        "- Daily driver (best all-round)\n"
-        "- Coding specialist\n"
-        "- Budget / high-value\n"
-        "- Self-hosted / open-source\n"
-        "- Long-context tasks\n"
-        "Flag any 'hidden gems': high ELO but low OR adoption (underutilized).\n\n"
-        "## 2. Investment Watch\n"
-        "Top 4 companies. For each: market position, revenue signal, portfolio strength, momentum, key risk. Bullets.\n\n"
-        "## 3. Key Trends\n"
-        "2-3 macro patterns visible in the data (e.g. OSS closing gap, price compression, specific lab surge).\n\n"
-        "Be concise, bullets, actionable. No intro fluff."
+        "Data Legend: ELO (Quality), OR vol (Adoption/Usage), Price ($/1M tokens), Ctx (Context Window).\n\n"
+        "Analyze the provided rankings, fast risers, and new stars to produce exactly 2 sections:\n\n"
+        "## 1. Model Recommendations & Scenarios\n"
+        "Based on the data, identify the best picks for:\n"
+        "- The 'Daily Driver' (Top ELO + high adoption)\n"
+        "- The 'Coding Powerhouse' (Best coding ELO)\n"
+        "- The 'Value King' (Highest ELO-to-price ratio)\n"
+        "- The 'Open Source Champion' (Best OSS model in top ranks)\n"
+        "- The 'Hidden Gem' (High ELO but low OR volume)\n"
+        "Explain each choice in 1 bullet point.\n\n"
+        "## 2. Lab Momentum & Market Shifts\n"
+        "Analyze which labs (Anthropic, OpenAI, Google, DeepSeek, etc.) are dominating the top 15 or surging in the risers. "
+        "Identify 2-3 macro trends (e.g., price-performance shifts, proprietary vs. open-source gap, or specific lab surges).\n\n"
+        "Be concise, technical, and actionable. No intro or outro fluff."
     )
     import os
     env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
