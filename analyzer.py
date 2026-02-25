@@ -31,7 +31,7 @@ def get_is_open_source(model_id: str) -> bool:
     mid = model_id.split("/", 1)[-1].lower()
     OPEN = ["llama", "gemma", "mistral", "mixtral", "ministral", "deepseek",
             "qwen", "qwq", "phi", "command-r", "granite", "olmo", "molmo",
-            "jamba", "llama-3.1-nemotron", "llama-3.3-nemotron"]
+            "jamba", "llama-3.1-nemotron", "llama-3.3-nemotron", "yi", "glm"]
     return any(mid.startswith(p) for p in OPEN)
 
 
@@ -191,7 +191,8 @@ def analyze(lmarena: dict, aa: dict, or_data: dict) -> dict:
                         })
                 
                 # Case B: New model debut (Rising from 'unranked' to Top 100)
-                elif r["rank"] <= 100 and prev_by_id: # Only if we have baseline data to compare to
+                # Only consider it a "debut" if it's actually a recent release (last 30 days)
+                elif r["rank"] <= 100 and prev_by_id and (r["days_in_board"] is None or r["days_in_board"] <= 30):
                     risers.append({
                         **r, 
                         "rank_delta": (101 - r["rank"]), # Proxy delta

@@ -295,6 +295,11 @@
       color: var(--badge-green-text); 
     }
 
+    .tag-open {
+      background: rgba(187, 154, 247, 0.15);
+      color: #bb9af7;
+    }
+
     .cat-label {
       font-size: 10px;
       font-weight: 700;
@@ -626,7 +631,10 @@
                         <span class="lab-avatar" data-lab="{{ r.lab }}" {% if r.lab_logo %}style="display:none;"{% endif %}>{{ r.lab[0] }}</span>
                       </div>
                     </td>
-                    <td class="col-model" title="{{ r.model_display }}">{{ r.model_display }}</td>
+                    <td class="col-model" title="{{ r.model_display }}">
+                      {{ r.model_display }}
+                      {% if r.is_open_source %}<span class="tag tag-open">Open</span>{% endif %}
+                    </td>
                     <td class="col-delta text-green">
                       {% if r.is_debut %}
                         <span class="tag tag-new" style="margin-left:0;">DEBUT</span>
@@ -705,7 +713,10 @@
                         <span class="lab-avatar" data-lab="{{ r.lab }}" {% if r.lab_logo %}style="display:none;"{% endif %}>{{ r.lab[0] }}</span>
                       </div>
                     </td>
-                    <td class="col-model">{{ r.model_display }}</td>
+                    <td class="col-model">
+                      {{ r.model_display }}
+                      {% if r.is_open_source %}<span class="tag tag-open">Open</span>{% endif %}
+                    </td>
                     <td class="col-val">{{ r.elo }}</td>
                     <td class="col-val">{% if r.price_input %}${{ "%.2f"|format(r.price_input) }}{% else %}<span class="na">—</span>{% endif %}</td>
                     <td class="col-val">{% if r.or_volume %}{% if r.or_volume >= 1000000000 %}{{ "%.1f"|format(r.or_volume / 1000000000) }}B{% else %}{{ "%.1f"|format(r.or_volume / 1000000) }}M{% endif %}{% else %}<span class="na">—</span>{% endif %}</td>
@@ -781,6 +792,7 @@
                     </td>
                     <td class="col-model">
                       {{ r.model_display }}
+                      {% if r.is_open_source %}<span class="tag tag-open">Open</span>{% endif %}
                       {% if r.is_new_star %}<span class="tag tag-new">New</span>{% endif %}
                       {% if r.is_riser %}<span class="tag tag-rise">Rising</span>{% endif %}
                     </td>

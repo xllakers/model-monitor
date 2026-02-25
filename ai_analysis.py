@@ -53,21 +53,24 @@ def prepare_summary(analysis_result: dict) -> str:
             or_str = f", OR vol {_fmt_vol(r.get('or_volume'))}" if r.get("or_volume") else ""
             price = f", ${r['price_input']:.2f}/1M" if r.get("price_input") else ""
             ctx = f", ctx {_fmt_ctx(r.get('context_length'))}" if r.get("context_length") else ""
-            lines.append(f"- {r['model_display']} ({r['lab']}) rank {r['rank']}, ELO {r['elo']}{or_str}{price}{ctx}")
+            oss = " (OSS)" if r.get("is_open_source") else ""
+            lines.append(f"- {r['model_display']}{oss} ({r['lab']}) rank {r['rank']}, ELO {r['elo']}{or_str}{price}{ctx}")
 
     lines.append("\n## Fast Risers (top 5, 7d window)")
     for cat in ("general", "coding"):
         lines.append(f"### {cat.title()}")
         for r in analysis_result["fast_risers"]["7d"].get(cat, [])[:5]:
             or_str = f", OR vol {_fmt_vol(r.get('or_volume'))}" if r.get("or_volume") else ""
-            lines.append(f"- {r['model_display']} ({r['lab']}) rank {r['rank']}, +{r['rank_delta']} positions, ELO {r['elo']}{or_str}")
+            oss = " (OSS)" if r.get("is_open_source") else ""
+            lines.append(f"- {r['model_display']}{oss} ({r['lab']}) rank {r['rank']}, +{r['rank_delta']} positions, ELO {r['elo']}{or_str}")
 
     lines.append("\n## New Stars (top 5 per category, 7d window)")
     for cat in ("general", "coding"):
         lines.append(f"### {cat.title()}")
         for r in analysis_result["new_stars"]["7d"].get(cat, [])[:5]:
             or_str = f", OR vol {_fmt_vol(r.get('or_volume'))}" if r.get("or_volume") else ""
-            lines.append(f"- {r['model_display']} ({r['lab']}) rank {r['rank']}, ELO {r['elo']}{or_str}")
+            oss = " (OSS)" if r.get("is_open_source") else ""
+            lines.append(f"- {r['model_display']}{oss} ({r['lab']}) rank {r['rank']}, ELO {r['elo']}{or_str}")
 
     return "\n".join(lines)
 
