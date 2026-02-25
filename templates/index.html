@@ -102,14 +102,29 @@
     section {
       display: flex;
       flex-direction: column;
-      gap: 20px;
     }
 
+    details {
+      width: 100%;
+    }
+    
+    details > summary {
+      list-style: none;
+      cursor: pointer;
+      outline: none;
+    }
+    
+    details > summary::-webkit-details-marker {
+      display: none;
+    }
+    
     .section-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
       padding: 0 4px;
+      margin-bottom: 20px;
+      user-select: none;
     }
 
     section h2 {
@@ -120,6 +135,23 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      transition: color 0.2s;
+    }
+    
+    section summary:hover h2 {
+      color: var(--accent-hover);
+    }
+    
+    .fold-icon {
+      display: inline-block;
+      font-size: 10px;
+      color: var(--accent);
+      transition: transform 0.2s ease;
+      margin-right: 4px;
+    }
+    
+    details:not([open]) .fold-icon {
+      transform: rotate(-90deg);
     }
     
     section h2::before {
@@ -129,6 +161,10 @@
       height: 18px;
       background: var(--accent);
       border-radius: 2px;
+    }
+
+    .section-content {
+      animation: fadeIn 0.3s ease;
     }
 
     /* Cards */
@@ -503,348 +539,370 @@
 
 <main>
 
-  <!-- Model Picks -->
-  <section id="model-picks">
-    <div class="section-header">
-      <h2>Model Picks</h2>
-    </div>
-    <div class="picks-grid">
-      <!-- Cloud -->
-      <div class="card">
-        <div class="card-label">☁️ Cloud / Proprietary</div>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 110px">Type</th>
-                <th>Model</th>
-                <th>Lab</th>
-                <th class="col-val">ELO</th>
-                <th class="col-val">$/1M</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% set cloud_picks = [
-                ("Best Overall", model_picks.best_cloud),
-                ("Best Value",   model_picks.best_value_cloud),
-                ("Best Coding",  model_picks.best_coding_cloud),
-              ] %}
-              {% for label, m in cloud_picks %}
-              <tr>
-                <td style="font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em;">{{ label }}</td>
-                {% if m %}
-                <td class="col-model" title="{{ m.model_id }}">{{ m.model_display }}</td>
-                <td style="color: var(--text-tertiary); font-size: 12px;">{{ m.lab }}</td>
-                <td class="col-val">{{ m.elo }}</td>
-                <td class="col-val">{% if m.price_input %}${{ "%.2f"|format(m.price_input) }}{% else %}<span class="na">—</span>{% endif %}</td>
-                {% else %}
-                <td colspan="4" class="na">—</td>
-                {% endif %}
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <!-- Open Source -->
-      <div class="card">
-        <div class="card-label">🔓 Open Source</div>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 110px">Type</th>
-                <th>Model</th>
-                <th>Lab</th>
-                <th class="col-val">ELO</th>
-                <th class="col-val">$/1M</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% set oss_picks = [
-                ("Best Overall", model_picks.best_oss),
-                ("Best Value",   model_picks.best_value_oss),
-                ("Best Coding",  model_picks.best_coding_oss),
-              ] %}
-              {% for label, m in oss_picks %}
-              <tr>
-                <td style="font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em;">{{ label }}</td>
-                {% if m %}
-                <td class="col-model" title="{{ m.model_id }}">{{ m.model_display }}</td>
-                <td style="color: var(--text-tertiary); font-size: 12px;">{{ m.lab }}</td>
-                <td class="col-val">{{ m.elo }}</td>
-                <td class="col-val">{% if m.price_input %}${{ "%.2f"|format(m.price_input) }}{% else %}<span class="na">—</span>{% endif %}</td>
-                {% else %}
-                <td colspan="4" class="na">—</td>
-                {% endif %}
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Investment Watch -->
-  <section id="investment-watch">
-    <div class="section-header">
-      <h2>Investment Watch</h2>
-    </div>
-    <div class="card">
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Lab</th>
-              <th class="col-val">Score</th>
-              <th class="col-val">Risers</th>
-              <th class="col-val">New Stars</th>
-              <th class="col-val">Top-30 G</th>
-              <th class="col-val">Top-30 C</th>
-              <th>Best Model</th>
-              <th class="col-val">Best Rank</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for entry in company_momentum %}
-            <tr>
-              <td class="col-model">{{ entry.lab }}</td>
-              <td class="col-val"><span class="score-pill">{{ entry.momentum_score }}</span></td>
-              <td class="col-val">{{ entry.fast_risers or '—' }}</td>
-              <td class="col-val">{{ entry.new_stars or '—' }}</td>
-              <td class="col-val">{{ entry.top30_general or '—' }}</td>
-              <td class="col-val">{{ entry.top30_coding or '—' }}</td>
-              <td style="color: var(--text-secondary); max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="{{ entry.top_model }}">{{ entry.top_model }}</td>
-              <td class="col-val"><span class="rank-num">{{ entry.best_rank }}</span></td>
-            </tr>
-            {% else %}
-            <tr>
-              <td colspan="8" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No momentum data</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
   <!-- AI Insights -->
   <section id="ai-insights">
-    <div class="section-header">
-      <h2>AI Insights</h2>
-      <button class="btn-refresh" id="insights-btn" onclick="refreshInsights()">Refresh</button>
-    </div>
-    <div class="card" id="insights-card">
-      <div class="insights-placeholder" id="insights-text">
-        {% if ai_insights %}
-        Loading analysis...
-        {% else %}
-        No analysis cached — click Refresh to generate
-        {% endif %}
+    <details open>
+      <summary class="section-header">
+        <h2><span class="fold-icon">▼</span> AI Insights</h2>
+        <button class="btn-refresh" id="insights-btn" onclick="refreshInsights(event)">Refresh</button>
+      </summary>
+      <div class="section-content">
+        <div class="card" id="insights-card">
+          <div class="insights-placeholder" id="insights-text">
+            {% if ai_insights %}
+            Loading analysis...
+            {% else %}
+            No analysis cached — click Refresh to generate
+            {% endif %}
+          </div>
+          {% if ai_insights %}
+          <script type="application/json" id="initial-insights-data">
+            {{ ai_insights|tojson|safe }}
+          </script>
+          {% endif %}
+        </div>
       </div>
-      {% if ai_insights %}
-      <script type="application/json" id="initial-insights-data">
-        {{ ai_insights|tojson|safe }}
-      </script>
-      {% endif %}
-    </div>
+    </details>
   </section>
 
   <!-- Fast Risers -->
   <section id="fast-risers">
-    <div class="section-header">
-      <h2>Fast Risers</h2>
-      <div style="display:flex; gap:12px; align-items:center;">
-        <div class="tabs" id="fr-win">
-          <button class="tab active" data-win="7d" onclick="switchFrWin('7d')">7d</button>
-          <button class="tab" data-win="30d" onclick="switchFrWin('30d')">30d</button>
+    <details open>
+      <summary class="section-header">
+        <h2><span class="fold-icon">▼</span> Fast Risers</h2>
+        <div style="display:flex; gap:12px; align-items:center;" onclick="event.preventDefault(); event.stopPropagation();">
+          <div class="tabs" id="fr-win">
+            <button class="tab active" data-win="7d" onclick="switchFrWin('7d')">7d</button>
+            <button class="tab" data-win="30d" onclick="switchFrWin('30d')">30d</button>
+          </div>
+          <div class="tabs">
+            <button class="tab {% if tab == 'general' %}active{% endif %}" data-cat="general" onclick="switchTab('general')">General</button>
+            <button class="tab {% if tab == 'coding' %}active{% endif %}" data-cat="coding" onclick="switchTab('coding')">Coding</button>
+          </div>
         </div>
-        <div class="tabs">
-          <button class="tab {% if tab == 'general' %}active{% endif %}" data-cat="general" onclick="switchTab('general')">General</button>
-          <button class="tab {% if tab == 'coding' %}active{% endif %}" data-cat="coding" onclick="switchTab('coding')">Coding</button>
+      </summary>
+      <div class="section-content">
+        <div class="card">
+          {% for win in ["7d", "30d"] %}{% for cat_key in ["general", "coding"] %}
+          <div class="tab-panel {% if win == '7d' and tab == cat_key %}active{% endif %}" data-section="fr" data-cat="{{ cat_key }}" data-win="{{ win }}">
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="col-rank">#</th>
+                    <th class="{% if sort_fr_by == 'rank' %}active-sort{% endif %}" onclick="applySort('rank', 'fr')">
+                      Model <span class="sort-icon">{{ '↓' if (sort_fr_by == 'rank' and sort_fr_order == 'desc') else '↑' }}</span>
+                    </th>
+                    <th class="col-delta {% if sort_fr_by == 'delta' %}active-sort{% endif %}" onclick="applySort('delta', 'fr')">
+                      Change <span class="sort-icon">{{ '↓' if (sort_fr_by == 'delta' and sort_fr_order == 'desc') else '↑' }}</span>
+                    </th>
+                    <th class="col-val {% if sort_fr_by == 'elo' %}active-sort{% endif %}" onclick="applySort('elo', 'fr')">
+                      ELO <span class="sort-icon">{{ '↓' if (sort_fr_by == 'elo' and sort_fr_order == 'desc') else '↑' }}</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for r in fast_risers[win][cat_key] %}
+                  <tr class="{% if r.rank <= 3 %}top3{% endif %}">
+                    <td class="col-rank"><span class="rank-num">{{ r.rank }}</span></td>
+                    <td class="col-model" title="{{ r.model_display }}">{{ r.model_display }}</td>
+                    <td class="col-delta text-green">↑{{ r.rank_delta }}</td>
+                    <td class="col-val">{{ r.elo }}</td>
+                  </tr>
+                  {% else %}
+                  <tr>
+                    <td colspan="4" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No significant risers yet</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {% endfor %}{% endfor %}
         </div>
       </div>
-    </div>
-    <div class="card">
-      {% for win in ["7d", "30d"] %}{% for cat_key in ["general", "coding"] %}
-      <div class="tab-panel {% if win == '7d' and tab == cat_key %}active{% endif %}" data-section="fr" data-cat="{{ cat_key }}" data-win="{{ win }}">
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th class="col-rank">#</th>
-                <th class="{% if sort_fr_by == 'rank' %}active-sort{% endif %}" onclick="applySort('rank', 'fr')">
-                  Model <span class="sort-icon">{{ '↓' if (sort_fr_by == 'rank' and sort_fr_order == 'desc') else '↑' }}</span>
-                </th>
-                <th class="col-delta {% if sort_fr_by == 'delta' %}active-sort{% endif %}" onclick="applySort('delta', 'fr')">
-                  Change <span class="sort-icon">{{ '↓' if (sort_fr_by == 'delta' and sort_fr_order == 'desc') else '↑' }}</span>
-                </th>
-                <th class="col-val {% if sort_fr_by == 'elo' %}active-sort{% endif %}" onclick="applySort('elo', 'fr')">
-                  ELO <span class="sort-icon">{{ '↓' if (sort_fr_by == 'elo' and sort_fr_order == 'desc') else '↑' }}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for r in fast_risers[win][cat_key] %}
-              <tr class="{% if r.rank <= 3 %}top3{% endif %}">
-                <td class="col-rank"><span class="rank-num">{{ r.rank }}</span></td>
-                <td class="col-model" title="{{ r.model_display }}">{{ r.model_display }}</td>
-                <td class="col-delta text-green">↑{{ r.rank_delta }}</td>
-                <td class="col-val">{{ r.elo }}</td>
-              </tr>
-              {% else %}
-              <tr>
-                <td colspan="4" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No significant risers yet</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      {% endfor %}{% endfor %}
-    </div>
+    </details>
   </section>
 
   <!-- New Stars -->
-  <section>
-    <div class="section-header">
-      <h2>New Stars</h2>
-      <div class="tabs" id="ns-win">
-        <button class="tab active" data-win="7d" onclick="switchNsWin('7d')">7d</button>
-        <button class="tab" data-win="30d" onclick="switchNsWin('30d')">30d</button>
-      </div>
-    </div>
-    <div class="card">
-      {% for win in ["7d", "30d"] %}
-      <div class="tab-panel {% if win == '7d' %}active{% endif %}" data-section="ns" data-win="{{ win }}">
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 80px">Category</th>
-                <th class="col-rank">Rank</th>
-                <th class="{% if sort_ns_by == 'rank' %}active-sort{% endif %}" onclick="applySort('rank', 'ns')">
-                  Model <span class="sort-icon">{{ '↓' if (sort_ns_by == 'rank' and sort_ns_order == 'desc') else '↑' }}</span>
-                </th>
-                <th class="col-val {% if sort_ns_by == 'elo' %}active-sort{% endif %}" onclick="applySort('elo', 'ns')">
-                  ELO <span class="sort-icon">{{ '↓' if (sort_ns_by == 'elo' and sort_ns_order == 'desc') else '↑' }}</span>
-                </th>
-                <th class="col-val {% if sort_ns_by == 'price' %}active-sort{% endif %}" onclick="applySort('price', 'ns')">
-                  Price / 1M <span class="sort-icon">{{ '↓' if (sort_ns_by == 'price' and sort_ns_order == 'desc') else '↑' }}</span>
-                </th>
-                <th class="col-val {% if sort_ns_by == 'speed' %}active-sort{% endif %}" onclick="applySort('speed', 'ns')">
-                  Speed <span class="sort-icon">{{ '↓' if (sort_ns_by == 'speed' and sort_ns_order == 'desc') else '↑' }}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for r in new_stars[win] %}
-              <tr class="{% if r.rank <= 3 %}top3{% endif %}">
-                <td class="cat-label">{{ r.category }}</td>
-                <td class="col-rank"><span class="rank-num">{{ r.rank }}</span></td>
-                <td class="col-model">{{ r.model_display }}</td>
-                <td class="col-val">{{ r.elo }}</td>
-                <td class="col-val">{% if r.price_input %}${{ "%.2f"|format(r.price_input) }}{% else %}<span class="na">—</span>{% endif %}</td>
-                <td class="col-val">{% if r.speed %}{{ r.speed|int }} <span style="font-size: 11px; color: var(--text-tertiary);">t/s</span>{% else %}<span class="na">—</span>{% endif %}</td>
-              </tr>
-              {% else %}
-              <tr>
-                <td colspan="6" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No new stars detected recently</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+  <section id="new-stars">
+    <details open>
+      <summary class="section-header">
+        <h2><span class="fold-icon">▼</span> New Stars</h2>
+        <div class="tabs" id="ns-win" onclick="event.preventDefault(); event.stopPropagation();">
+          <button class="tab active" data-win="7d" onclick="switchNsWin('7d')">7d</button>
+          <button class="tab" data-win="30d" onclick="switchNsWin('30d')">30d</button>
+        </div>
+      </summary>
+      <div class="section-content">
+        <div class="card">
+          {% for win in ["7d", "30d"] %}
+          <div class="tab-panel {% if win == '7d' %}active{% endif %}" data-section="ns" data-win="{{ win }}">
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 80px">Category</th>
+                    <th class="col-rank">Rank</th>
+                    <th class="{% if sort_ns_by == 'rank' %}active-sort{% endif %}" onclick="applySort('rank', 'ns')">
+                      Model <span class="sort-icon">{{ '↓' if (sort_ns_by == 'rank' and sort_ns_order == 'desc') else '↑' }}</span>
+                    </th>
+                    <th class="col-val {% if sort_ns_by == 'elo' %}active-sort{% endif %}" onclick="applySort('elo', 'ns')">
+                      ELO <span class="sort-icon">{{ '↓' if (sort_ns_by == 'elo' and sort_ns_order == 'desc') else '↑' }}</span>
+                    </th>
+                    <th class="col-val {% if sort_ns_by == 'price' %}active-sort{% endif %}" onclick="applySort('price', 'ns')">
+                      Price / 1M <span class="sort-icon">{{ '↓' if (sort_ns_by == 'price' and sort_ns_order == 'desc') else '↑' }}</span>
+                    </th>
+                    <th class="col-val {% if sort_ns_by == 'speed' %}active-sort{% endif %}" onclick="applySort('speed', 'ns')">
+                      Speed <span class="sort-icon">{{ '↓' if (sort_ns_by == 'speed' and sort_ns_order == 'desc') else '↑' }}</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for r in new_stars[win] %}
+                  <tr class="{% if r.rank <= 3 %}top3{% endif %}">
+                    <td class="cat-label">{{ r.category }}</td>
+                    <td class="col-rank"><span class="rank-num">{{ r.rank }}</span></td>
+                    <td class="col-model">{{ r.model_display }}</td>
+                    <td class="col-val">{{ r.elo }}</td>
+                    <td class="col-val">{% if r.price_input %}${{ "%.2f"|format(r.price_input) }}{% else %}<span class="na">—</span>{% endif %}</td>
+                    <td class="col-val">{% if r.speed %}{{ r.speed|int }} <span style="font-size: 11px; color: var(--text-tertiary);">t/s</span>{% else %}<span class="na">—</span>{% endif %}</td>
+                  </tr>
+                  {% else %}
+                  <tr>
+                    <td colspan="6" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No new stars detected recently</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {% endfor %}
         </div>
       </div>
-      {% endfor %}
-    </div>
+    </details>
   </section>
 
   <!-- Leaderboard -->
   <section id="rankings">
-    <div class="section-header">
-      <h2>Leaderboard</h2>
-      <div class="tabs">
-        <button class="tab {% if tab == 'general' %}active{% endif %}" data-cat="general" onclick="switchTab('general')">General</button>
-        <button class="tab {% if tab == 'coding' %}active{% endif %}" data-cat="coding" onclick="switchTab('coding')">Coding</button>
-      </div>
-    </div>
-
-    <div class="card">
-      {% for cat_key in ["general", "coding"] %}
-      <div class="tab-panel {% if tab == cat_key %}active{% endif %}" data-section="lb" data-cat="{{ cat_key }}">
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th class="col-rank {% if sort_lb_by == 'rank' %}active-sort{% endif %}" onclick="applySort('rank', 'lb')">
-                  Rank <span class="sort-icon">{{ '↓' if (sort_lb_by == 'rank' and sort_lb_order == 'desc') else '↑' }}</span>
-                </th>
-                <th>Model</th>
-                <th class="col-val {% if sort_lb_by == 'elo' %}active-sort{% endif %}" onclick="applySort('elo', 'lb')">
-                  ELO <span class="sort-icon">{{ '↓' if (sort_lb_by == 'elo' and sort_lb_order == 'desc') else '↑' }}</span>
-                </th>
-                <th class="col-delta {% if sort_lb_by == 'delta' %}active-sort{% endif %}" onclick="applySort('delta', 'lb')">
-                  7d Δ <span class="sort-icon">{{ '↓' if (sort_lb_by == 'delta' and sort_lb_order == 'desc') else '↑' }}</span>
-                </th>
-                <th class="col-val {% if sort_lb_by == 'price' %}active-sort{% endif %}" onclick="applySort('price', 'lb')">
-                  Price / 1M <span class="sort-icon">{{ '↓' if (sort_lb_by == 'price' and sort_lb_order == 'desc') else '↑' }}</span>
-                </th>
-                <th class="col-val {% if sort_lb_by == 'speed' %}active-sort{% endif %}" onclick="applySort('speed', 'lb')">
-                  Speed <span class="sort-icon">{{ '↓' if (sort_lb_by == 'speed' and sort_lb_order == 'desc') else '↑' }}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for r in rankings[cat_key] %}
-              <tr class="{% if r.rank <= 3 %}top3{% endif %}">
-                <td class="col-rank"><span class="rank-num">{{ r.rank }}</span></td>
-                <td class="col-model">
-                  {{ r.model_display }}
-                  {% if r.is_new_star %}<span class="tag tag-new">New</span>{% endif %}
-                  {% if r.is_riser %}<span class="tag tag-rise">Rising</span>{% endif %}
-                </td>
-                <td class="col-val">{{ r.elo }}</td>
-                <td class="col-delta">
-                  {% if r.rank_delta %}
-                    <span class="{% if r.rank_delta > 0 %}text-green{% elif r.rank_delta < 0 %}text-red{% else %}na{% endif %}">
-                      {{ '↑' if r.rank_delta > 0 else ('↓' if r.rank_delta < 0 else '') }}{{ r.rank_delta|abs if r.rank_delta != 0 else '-' }}
-                    </span>
+    <details open>
+      <summary class="section-header">
+        <h2><span class="fold-icon">▼</span> Leaderboard</h2>
+        <div class="tabs" onclick="event.preventDefault(); event.stopPropagation();">
+          <button class="tab {% if tab == 'general' %}active{% endif %}" data-cat="general" onclick="switchTab('general')">General</button>
+          <button class="tab {% if tab == 'coding' %}active{% endif %}" data-cat="coding" onclick="switchTab('coding')">Coding</button>
+        </div>
+      </summary>
+      <div class="section-content">
+        <div class="card">
+          {% for cat_key in ["general", "coding"] %}
+          <div class="tab-panel {% if tab == cat_key %}active{% endif %}" data-section="lb" data-cat="{{ cat_key }}">
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="col-rank {% if sort_lb_by == 'rank' %}active-sort{% endif %}" onclick="applySort('rank', 'lb')">
+                      Rank <span class="sort-icon">{{ '↓' if (sort_lb_by == 'rank' and sort_lb_order == 'desc') else '↑' }}</span>
+                    </th>
+                    <th>Model</th>
+                    <th class="col-val {% if sort_lb_by == 'elo' %}active-sort{% endif %}" onclick="applySort('elo', 'lb')">
+                      ELO <span class="sort-icon">{{ '↓' if (sort_lb_by == 'elo' and sort_lb_order == 'desc') else '↑' }}</span>
+                    </th>
+                    <th class="col-delta {% if sort_lb_by == 'delta' %}active-sort{% endif %}" onclick="applySort('delta', 'lb')">
+                      7d Δ <span class="sort-icon">{{ '↓' if (sort_lb_by == 'delta' and sort_lb_order == 'desc') else '↑' }}</span>
+                    </th>
+                    <th class="col-val {% if sort_lb_by == 'price' %}active-sort{% endif %}" onclick="applySort('price', 'lb')">
+                      Price / 1M <span class="sort-icon">{{ '↓' if (sort_lb_by == 'price' and sort_lb_order == 'desc') else '↑' }}</span>
+                    </th>
+                    <th class="col-val {% if sort_lb_by == 'speed' %}active-sort{% endif %}" onclick="applySort('speed', 'lb')">
+                      Speed <span class="sort-icon">{{ '↓' if (sort_lb_by == 'speed' and sort_lb_order == 'desc') else '↑' }}</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for r in rankings[cat_key] %}
+                  <tr class="{% if r.rank <= 3 %}top3{% endif %}">
+                    <td class="col-rank"><span class="rank-num">{{ r.rank }}</span></td>
+                    <td class="col-model">
+                      {{ r.model_display }}
+                      {% if r.is_new_star %}<span class="tag tag-new">New</span>{% endif %}
+                      {% if r.is_riser %}<span class="tag tag-rise">Rising</span>{% endif %}
+                    </td>
+                    <td class="col-val">{{ r.elo }}</td>
+                    <td class="col-delta">
+                      {% if r.rank_delta %}
+                        <span class="{% if r.rank_delta > 0 %}text-green{% elif r.rank_delta < 0 %}text-red{% else %}na{% endif %}">
+                          {{ '↑' if r.rank_delta > 0 else ('↓' if r.rank_delta < 0 else '') }}{{ r.rank_delta|abs if r.rank_delta != 0 else '-' }}
+                        </span>
+                      {% else %}
+                        <span class="na">—</span>
+                      {% endif %}
+                    </td>
+                    <td class="col-val">{% if r.price_input %}${{ "%.2f"|format(r.price_input) }}{% else %}<span class="na">—</span>{% endif %}</td>
+                    <td class="col-val">{% if r.speed %}{{ r.speed|int }} <span style="font-size: 11px; color: var(--text-tertiary);">t/s</span>{% else %}<span class="na">—</span>{% endif %}</td>
+                  </tr>
                   {% else %}
-                    <span class="na">—</span>
-                  {% endif %}
-                </td>
-                <td class="col-val">{% if r.price_input %}${{ "%.2f"|format(r.price_input) }}{% else %}<span class="na">—</span>{% endif %}</td>
-                <td class="col-val">{% if r.speed %}{{ r.speed|int }} <span style="font-size: 11px; color: var(--text-tertiary);">t/s</span>{% else %}<span class="na">—</span>{% endif %}</td>
-              </tr>
-              {% else %}
-              <tr>
-                <td colspan="6" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No rankings available</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+                  <tr>
+                    <td colspan="6" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No rankings available</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Paging -->
+        {% if total_pages > 1 %}
+        <div class="pagination">
+          <a href="/?page={{ page - 1 }}&tab={{ tab }}&sort_lb={{ sort_lb_by }}&order_lb={{ sort_lb_order }}&sort_fr={{ sort_fr_by }}&order_fr={{ sort_fr_order }}&sort_ns={{ sort_ns_by }}&order_ns={{ sort_ns_order }}#rankings" class="btn-page {% if page <= 1 %}disabled{% endif %}">Prev</a>
+          {% for p in range(1, total_pages + 1) %}
+            {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+              <a href="/?page={{ p }}&tab={{ tab }}&sort_lb={{ sort_lb_by }}&order_lb={{ sort_lb_order }}&sort_fr={{ sort_fr_by }}&order_fr={{ sort_fr_order }}&sort_ns={{ sort_ns_by }}&order_ns={{ sort_ns_order }}#rankings" class="btn-page {% if p == page %}active{% endif %}">{{ p }}</a>
+            {% elif p == page - 3 or p == page + 3 %}
+              <span style="color: var(--text-tertiary); font-size: 14px; margin: 0 4px;">...</span>
+            {% endif %}
+          {% endfor %}
+          <a href="/?page={{ page + 1 }}&tab={{ tab }}&sort_lb={{ sort_lb_by }}&order_lb={{ sort_lb_order }}&sort_fr={{ sort_fr_by }}&order_fr={{ sort_fr_order }}&sort_ns={{ sort_ns_by }}&order_ns={{ sort_ns_order }}#rankings" class="btn-page {% if page >= total_pages %}disabled{% endif %}">Next</a>
+        </div>
+        {% endif %}
+      </div>
+    </details>
+  </section>
+
+  <!-- Model Picks -->
+  <section id="model-picks">
+    <details open>
+      <summary class="section-header">
+        <h2><span class="fold-icon">▼</span> Model Picks</h2>
+      </summary>
+      <div class="section-content">
+        <div class="picks-grid">
+          <!-- Cloud -->
+          <div class="card">
+            <div class="card-label">☁️ Cloud / Proprietary</div>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 110px">Type</th>
+                    <th>Model</th>
+                    <th>Lab</th>
+                    <th class="col-val">ELO</th>
+                    <th class="col-val">$/1M</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% set cloud_picks = [
+                    ("Best Overall", model_picks.best_cloud),
+                    ("Best Value",   model_picks.best_value_cloud),
+                    ("Best Coding",  model_picks.best_coding_cloud),
+                  ] %}
+                  {% for label, m in cloud_picks %}
+                  <tr>
+                    <td style="font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em;">{{ label }}</td>
+                    {% if m %}
+                    <td class="col-model" title="{{ m.model_id }}">{{ m.model_display }}</td>
+                    <td style="color: var(--text-tertiary); font-size: 12px;">{{ m.lab }}</td>
+                    <td class="col-val">{{ m.elo }}</td>
+                    <td class="col-val">{% if m.price_input %}${{ "%.2f"|format(m.price_input) }}{% else %}<span class="na">—</span>{% endif %}</td>
+                    {% else %}
+                    <td colspan="4" class="na">—</td>
+                    {% endif %}
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <!-- Open Source -->
+          <div class="card">
+            <div class="card-label">🔓 Open Source</div>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 110px">Type</th>
+                    <th>Model</th>
+                    <th>Lab</th>
+                    <th class="col-val">ELO</th>
+                    <th class="col-val">$/1M</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% set oss_picks = [
+                    ("Best Overall", model_picks.best_oss),
+                    ("Best Value",   model_picks.best_value_oss),
+                    ("Best Coding",  model_picks.best_coding_oss),
+                  ] %}
+                  {% for label, m in oss_picks %}
+                  <tr>
+                    <td style="font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em;">{{ label }}</td>
+                    {% if m %}
+                    <td class="col-model" title="{{ m.model_id }}">{{ m.model_display }}</td>
+                    <td style="color: var(--text-tertiary); font-size: 12px;">{{ m.lab }}</td>
+                    <td class="col-val">{{ m.elo }}</td>
+                    <td class="col-val">{% if m.price_input %}${{ "%.2f"|format(m.price_input) }}{% else %}<span class="na">—</span>{% endif %}</td>
+                    {% else %}
+                    <td colspan="4" class="na">—</td>
+                    {% endif %}
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
-      {% endfor %}
-    </div>
+    </details>
+  </section>
 
-    <!-- Paging -->
-    {% if total_pages > 1 %}
-    <div class="pagination">
-      <a href="/?page={{ page - 1 }}&tab={{ tab }}&sort_lb={{ sort_lb_by }}&order_lb={{ sort_lb_order }}&sort_fr={{ sort_fr_by }}&order_fr={{ sort_fr_order }}&sort_ns={{ sort_ns_by }}&order_ns={{ sort_ns_order }}#rankings" class="btn-page {% if page <= 1 %}disabled{% endif %}">Prev</a>
-      {% for p in range(1, total_pages + 1) %}
-        {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
-          <a href="/?page={{ p }}&tab={{ tab }}&sort_lb={{ sort_lb_by }}&order_lb={{ sort_lb_order }}&sort_fr={{ sort_fr_by }}&order_fr={{ sort_fr_order }}&sort_ns={{ sort_ns_by }}&order_ns={{ sort_ns_order }}#rankings" class="btn-page {% if p == page %}active{% endif %}">{{ p }}</a>
-        {% elif p == page - 3 or p == page + 3 %}
-          <span style="color: var(--text-tertiary); font-size: 14px; margin: 0 4px;">...</span>
-        {% endif %}
-      {% endfor %}
-      <a href="/?page={{ page + 1 }}&tab={{ tab }}&sort_lb={{ sort_lb_by }}&order_lb={{ sort_lb_order }}&sort_fr={{ sort_fr_by }}&order_fr={{ sort_fr_order }}&sort_ns={{ sort_ns_by }}&order_ns={{ sort_ns_order }}#rankings" class="btn-page {% if page >= total_pages %}disabled{% endif %}">Next</a>
-    </div>
-    {% endif %}
-
+  <!-- Investment Watch -->
+  <section id="investment-watch">
+    <details open>
+      <summary class="section-header">
+        <h2><span class="fold-icon">▼</span> Investment Watch</h2>
+      </summary>
+      <div class="section-content">
+        <div class="card">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Lab</th>
+                  <th class="col-val">Score</th>
+                  <th class="col-val">Risers</th>
+                  <th class="col-val">New Stars</th>
+                  <th class="col-val">Top-30 G</th>
+                  <th class="col-val">Top-30 C</th>
+                  <th>Best Model</th>
+                  <th class="col-val">Best Rank</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for entry in company_momentum %}
+                <tr>
+                  <td class="col-model">{{ entry.lab }}</td>
+                  <td class="col-val"><span class="score-pill">{{ entry.momentum_score }}</span></td>
+                  <td class="col-val">{{ entry.fast_risers or '—' }}</td>
+                  <td class="col-val">{{ entry.new_stars or '—' }}</td>
+                  <td class="col-val">{{ entry.top30_general or '—' }}</td>
+                  <td class="col-val">{{ entry.top30_coding or '—' }}</td>
+                  <td style="color: var(--text-secondary); max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="{{ entry.top_model }}">{{ entry.top_model }}</td>
+                  <td class="col-val"><span class="rank-num">{{ entry.best_rank }}</span></td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="8" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No momentum data</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </details>
   </section>
 
 </main>
@@ -901,7 +959,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-async function refreshInsights() {
+async function refreshInsights(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
   const btn = document.getElementById('insights-btn');
   const textEl = document.getElementById('insights-text');
   btn.disabled = true;

@@ -17,7 +17,7 @@ def index():
     sort_fr_order = request.args.get("order_fr", "desc")
     sort_ns_by = request.args.get("sort_ns", "rank")
     sort_ns_order = request.args.get("order_ns", "asc")
-    per_page = 50
+    per_page = 25
 
     lm_data = lmarena.fetch()
     aa_data = artificial_analysis.fetch()
