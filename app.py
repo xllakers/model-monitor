@@ -51,7 +51,8 @@ def index():
             sort_list(data["fast_risers"][window][cat], sort_fr_by, sort_fr_order)
 
     for window in ("7d", "30d"):
-        sort_list(data["new_stars"][window], sort_ns_by, sort_ns_order)
+        for cat in data["new_stars"].get(window, {}):
+            sort_list(data["new_stars"][window][cat], sort_ns_by, sort_ns_order)
 
     # Paginate rankings
     paginated_rankings = {}

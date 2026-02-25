@@ -116,7 +116,7 @@ def analyze(lmarena: dict, aa: dict, or_data: dict) -> dict:
 
     rankings: dict[str, list] = {}
     fast_risers: dict[str, dict[str, list]] = {"7d": {}, "30d": {}}
-    new_stars: dict[str, list] = {"7d": [], "30d": []}
+    new_stars: dict[str, dict[str, list]] = {"7d": {"general": [], "coding": []}, "30d": {"general": [], "coding": []}}
 
     for cat in ("general", "coding"):
         cur_rows = current.get(cat, [])
@@ -183,7 +183,7 @@ def analyze(lmarena: dict, aa: dict, or_data: dict) -> dict:
                 if r["rank"] <= 30 and r["model_id"] not in top50 and top50:
                     if window == "7d":
                         r["is_new_star"] = True
-                    new_stars[window].append({**r, "category": cat})
+                    new_stars[window][cat].append({**r, "category": cat})
 
         # Mark is_riser on merged rows from 7d window
         riser_ids_7d = {r["model_id"] for r in fast_risers["7d"].get(cat, [])}
@@ -192,7 +192,8 @@ def analyze(lmarena: dict, aa: dict, or_data: dict) -> dict:
                 r["is_riser"] = True
 
     for window in new_stars:
-        new_stars[window].sort(key=lambda x: x["rank"])
+        for cat in new_stars[window]:
+            new_stars[window][cat].sort(key=lambda x: x["rank"])
 
     return {
         "fast_risers": fast_risers,

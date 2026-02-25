@@ -22,8 +22,8 @@ for win in ("7d", "30d"):
     for cat in ("general", "coding"):
         risers = result["fast_risers"][win][cat]
         print(f"Fast risers [{win}][{cat}]: {len(risers)}")
-    ns = result["new_stars"][win]
-    print(f"New stars [{win}]: {len(ns)}")
+        ns = result["new_stars"][win][cat]
+        print(f"New stars [{win}][{cat}]: {len(ns)}")
 
 print(f"General rankings:    {len(result['rankings']['general'])} models")
 print(f"Last updated:        {result['last_updated']}")

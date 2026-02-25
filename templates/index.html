@@ -646,20 +646,25 @@
     <details open>
       <summary class="section-header">
         <h2><span class="fold-icon">▼</span> New Stars</h2>
-        <div class="tabs" id="ns-win" onclick="event.preventDefault(); event.stopPropagation();">
-          <button class="tab active" data-win="7d" onclick="switchNsWin('7d')">7d</button>
-          <button class="tab" data-win="30d" onclick="switchNsWin('30d')">30d</button>
+        <div style="display:flex; gap:12px; align-items:center;" onclick="event.preventDefault(); event.stopPropagation();">
+          <div class="tabs" id="ns-win">
+            <button class="tab active" data-win="7d" onclick="switchNsWin('7d')">7d</button>
+            <button class="tab" data-win="30d" onclick="switchNsWin('30d')">30d</button>
+          </div>
+          <div class="tabs">
+            <button class="tab {% if tab == 'general' %}active{% endif %}" data-cat="general" onclick="switchTab('general')">General</button>
+            <button class="tab {% if tab == 'coding' %}active{% endif %}" data-cat="coding" onclick="switchTab('coding')">Coding</button>
+          </div>
         </div>
       </summary>
       <div class="section-content">
         <div class="card">
-          {% for win in ["7d", "30d"] %}
-          <div class="tab-panel {% if win == '7d' %}active{% endif %}" data-section="ns" data-win="{{ win }}">
+          {% for win in ["7d", "30d"] %}{% for cat_key in ["general", "coding"] %}
+          <div class="tab-panel {% if win == '7d' and tab == cat_key %}active{% endif %}" data-section="ns" data-cat="{{ cat_key }}" data-win="{{ win }}">
             <div class="table-container">
               <table>
                 <thead>
                   <tr>
-                    <th style="width: 80px">Category</th>
                     <th class="col-rank">Rank</th>
                     <th class="col-avatar"></th>
                     <th class="{% if sort_ns_by == 'rank' %}active-sort{% endif %}" onclick="applySort('rank', 'ns')">
@@ -680,9 +685,8 @@
                   </tr>
                 </thead>
                 <tbody>
-                  {% for r in new_stars[win] %}
+                  {% for r in new_stars[win][cat_key] %}
                   <tr class="{% if r.rank <= 3 %}top3{% endif %}">
-                    <td class="cat-label">{{ r.category }}</td>
                     <td class="col-rank"><span class="rank-num">{{ r.rank }}</span></td>
                     <td class="col-avatar">
                       <div class="lab-avatar-container">
@@ -700,14 +704,18 @@
                   </tr>
                   {% else %}
                   <tr>
-                    <td colspan="8" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No new stars detected recently</td>
+                    <td colspan="7" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No new stars detected recently</td>
                   </tr>
                   {% endfor %}
                 </tbody>
               </table>
             </div>
           </div>
-          {% endfor %}
+          {% endfor %}{% endfor %}
+        </div>
+      </div>
+    </details>
+  </section>
         </div>
       </div>
     </details>
@@ -933,8 +941,8 @@ function switchTab(cat) {
   document.querySelectorAll(`.tab-panel[data-section="lb"][data-cat="${cat}"]`).forEach(p => p.classList.add('active'));
   // Activate FR panels for this cat + current window
   document.querySelectorAll(`.tab-panel[data-section="fr"][data-cat="${cat}"][data-win="${frWin}"]`).forEach(p => p.classList.add('active'));
-  // Re-activate current NS panel
-  document.querySelectorAll(`.tab-panel[data-section="ns"][data-win="${nsWin}"]`).forEach(p => p.classList.add('active'));
+  // Activate NS panels for this cat + current window
+  document.querySelectorAll(`.tab-panel[data-section="ns"][data-cat="${cat}"][data-win="${nsWin}"]`).forEach(p => p.classList.add('active'));
 
   document.querySelectorAll(`.tab[data-cat="${cat}"]`).forEach(t => t.classList.add('active'));
 
@@ -961,7 +969,7 @@ function switchNsWin(win) {
   nsWin = win;
   document.querySelectorAll('.tab-panel[data-section="ns"]').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('#ns-win .tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll(`.tab-panel[data-section="ns"][data-win="${win}"]`).forEach(p => p.classList.add('active'));
+  document.querySelectorAll(`.tab-panel[data-section="ns"][data-cat="${currentCat}"][data-win="${win}"]`).forEach(p => p.classList.add('active'));
   document.querySelectorAll(`#ns-win .tab[data-win="${win}"]`).forEach(t => t.classList.add('active'));
 }
 </script>
