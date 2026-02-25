@@ -194,6 +194,16 @@
     /* Tables */
     .table-container {
       overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Wide tables get a min-width so columns don't squish; scroll instead */
+    table.scorecard-table {
+      min-width: 860px;
+    }
+    table.scorecard-table th,
+    table.scorecard-table td {
+      white-space: nowrap;
     }
 
     table {
@@ -781,6 +791,7 @@
                     <th class="col-val {% if sort_lb_by == 'days_in_board' %}active-sort{% endif %}" onclick="applySort('days_in_board', 'lb')">
                       Days in Board <span class="sort-icon">{{ '↓' if (sort_lb_by == 'days_in_board' and sort_lb_order == 'desc') else '↑' }}</span>
                     </th>
+                    <th class="col-val">Ctx</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -813,10 +824,11 @@
                     <td class="col-val">{% if r.price_input %}${{ "%.2f"|format(r.price_input) }}{% else %}<span class="na">—</span>{% endif %}</td>
                     <td class="col-val">{% if r.or_volume %}{% if r.or_volume >= 1000000000 %}{{ "%.1f"|format(r.or_volume / 1000000000) }}B{% else %}{{ "%.1f"|format(r.or_volume / 1000000) }}M{% endif %}{% else %}<span class="na">—</span>{% endif %}</td>
                     <td class="col-val">{% if r.days_in_board %}{{ r.days_in_board|int }} <span style="font-size: 11px; color: var(--text-tertiary);">days</span>{% else %}<span class="na">—</span>{% endif %}</td>
+                    <td class="col-val" style="font-size: 11px; color: var(--text-tertiary);">{% if r.context_length %}{% if r.context_length >= 1000000 %}{{ (r.context_length//1000000)|string }}M{% else %}{{ (r.context_length//1000)|string }}k{% endif %}{% else %}<span class="na">—</span>{% endif %}</td>
                   </tr>
                   {% else %}
                   <tr>
-                    <td colspan="8" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No rankings available</td>
+                    <td colspan="9" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No rankings available</td>
                   </tr>
                   {% endfor %}
                 </tbody>
@@ -864,19 +876,26 @@
                     <th>Lab</th>
                     <th class="col-val">ELO</th>
                     <th class="col-val">$/1M</th>
+                    <th class="col-val">OR Vol</th>
+                    <th class="col-val">Ctx</th>
                   </tr>
                 </thead>
                 <tbody>
                   {% set cloud_picks = [
-                    ("Best Overall", model_picks.best_cloud),
-                    ("Best Value",   model_picks.best_value_cloud),
-                    ("Best Coding",  model_picks.best_coding_cloud),
+                    ("Best Overall",    model_picks.best_cloud,         model_picks.best_cloud_ru),
+                    ("Best Value",      model_picks.best_value_cloud,   model_picks.best_value_cloud_ru),
+                    ("Best Coding",     model_picks.best_coding_cloud,  model_picks.best_coding_cloud_ru),
+                    ("Long Context",    model_picks.best_long_ctx_cloud,model_picks.best_long_ctx_cloud_ru),
+                    ("Most Adopted",    model_picks.most_adopted_cloud, model_picks.most_adopted_cloud_ru),
                   ] %}
-                  {% for label, m in cloud_picks %}
+                  {% for label, m, ru in cloud_picks %}
                   <tr>
                     <td style="font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em;">{{ label }}</td>
                     {% if m %}
-                    <td class="col-model" title="{{ m.model_id }}">{{ m.model_display }}</td>
+                    <td class="col-model" title="{{ m.model_id }}">
+                      {{ m.model_display }}
+                      {% if ru %}<div style="font-size: 10px; color: var(--text-tertiary); margin-top: 1px;">↳ {{ ru.model_display }}</div>{% endif %}
+                    </td>
                     <td style="color: var(--text-tertiary); font-size: 12px; display: flex; align-items: center; gap: 6px;">
                       <div class="lab-avatar-container" style="width: 18px; height: 18px;">
                         {% if m.lab_logo %}
@@ -888,8 +907,10 @@
                     </td>
                     <td class="col-val">{{ m.elo }}</td>
                     <td class="col-val">{% if m.price_input %}${{ "%.2f"|format(m.price_input) }}{% else %}<span class="na">—</span>{% endif %}</td>
+                    <td class="col-val">{% if m.or_volume %}{% if m.or_volume >= 1000000000 %}{{ "%.1f"|format(m.or_volume/1000000000) }}B{% else %}{{ "%.1f"|format(m.or_volume/1000000) }}M{% endif %}{% else %}<span class="na">—</span>{% endif %}</td>
+                    <td class="col-val">{% if m.context_length %}{% if m.context_length >= 1000000 %}{{ (m.context_length//1000000)|string }}M{% else %}{{ (m.context_length//1000)|string }}k{% endif %}{% else %}<span class="na">—</span>{% endif %}</td>
                     {% else %}
-                    <td colspan="4" class="na">—</td>
+                    <td colspan="6" class="na">—</td>
                     {% endif %}
                   </tr>
                   {% endfor %}
@@ -909,19 +930,26 @@
                     <th>Lab</th>
                     <th class="col-val">ELO</th>
                     <th class="col-val">$/1M</th>
+                    <th class="col-val">OR Vol</th>
+                    <th class="col-val">Ctx</th>
                   </tr>
                 </thead>
                 <tbody>
                   {% set oss_picks = [
-                    ("Best Overall", model_picks.best_oss),
-                    ("Best Value",   model_picks.best_value_oss),
-                    ("Best Coding",  model_picks.best_coding_oss),
+                    ("Best Overall",    model_picks.best_oss,         model_picks.best_oss_ru),
+                    ("Best Value",      model_picks.best_value_oss,   model_picks.best_value_oss_ru),
+                    ("Best Coding",     model_picks.best_coding_oss,  model_picks.best_coding_oss_ru),
+                    ("Long Context",    model_picks.best_long_ctx_oss,model_picks.best_long_ctx_oss_ru),
+                    ("Most Adopted",    model_picks.most_adopted_oss, model_picks.most_adopted_oss_ru),
                   ] %}
-                  {% for label, m in oss_picks %}
+                  {% for label, m, ru in oss_picks %}
                   <tr>
                     <td style="font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em;">{{ label }}</td>
                     {% if m %}
-                    <td class="col-model" title="{{ m.model_id }}">{{ m.model_display }}</td>
+                    <td class="col-model" title="{{ m.model_id }}">
+                      {{ m.model_display }}
+                      {% if ru %}<div style="font-size: 10px; color: var(--text-tertiary); margin-top: 1px;">↳ {{ ru.model_display }}</div>{% endif %}
+                    </td>
                     <td style="color: var(--text-tertiary); font-size: 12px; display: flex; align-items: center; gap: 6px;">
                       <div class="lab-avatar-container" style="width: 18px; height: 18px;">
                         {% if m.lab_logo %}
@@ -933,8 +961,10 @@
                     </td>
                     <td class="col-val">{{ m.elo }}</td>
                     <td class="col-val">{% if m.price_input %}${{ "%.2f"|format(m.price_input) }}{% else %}<span class="na">—</span>{% endif %}</td>
+                    <td class="col-val">{% if m.or_volume %}{% if m.or_volume >= 1000000000 %}{{ "%.1f"|format(m.or_volume/1000000000) }}B{% else %}{{ "%.1f"|format(m.or_volume/1000000) }}M{% endif %}{% else %}<span class="na">—</span>{% endif %}</td>
+                    <td class="col-val">{% if m.context_length %}{% if m.context_length >= 1000000 %}{{ (m.context_length//1000000)|string }}M{% else %}{{ (m.context_length//1000)|string }}k{% endif %}{% else %}<span class="na">—</span>{% endif %}</td>
                     {% else %}
-                    <td colspan="4" class="na">—</td>
+                    <td colspan="6" class="na">—</td>
                     {% endif %}
                   </tr>
                   {% endfor %}
@@ -956,21 +986,22 @@
       <div class="section-content">
         <div class="card">
           <div class="table-container">
-            <table>
+            <table class="scorecard-table">
               <thead>
                 <tr>
                   <th>Lab</th>
                   <th class="col-val">Score</th>
-                  <th class="col-val">Risers</th>
-                  <th class="col-val">New Stars</th>
-                  <th class="col-val">Top-30 G</th>
-                  <th class="col-val">Top-30 C</th>
-                  <th>Best Model</th>
-                  <th class="col-val">Best Rank</th>
+                  <th class="col-val">Mkt Share</th>
+                  <th class="col-val">Rev/wk</th>
+                  <th class="col-val">Top-10 G/C</th>
+                  <th class="col-val">Top-30 G/C</th>
+                  <th class="col-val">OSS/Prop</th>
+                  <th class="col-val">Risers+Stars</th>
+                  <th>Top Model</th>
                 </tr>
               </thead>
               <tbody>
-                {% for entry in company_momentum %}
+                {% for entry in company_scorecard %}
                 <tr>
                   <td class="col-model" style="display: flex; align-items: center; gap: 8px;">
                     <div class="lab-avatar-container">
@@ -980,18 +1011,34 @@
                       <span class="lab-avatar" data-lab="{{ entry.lab }}" {% if entry.lab_logo %}style="display:none;"{% endif %}>{{ entry.lab[0] }}</span>
                     </div>
                     {{ entry.lab }}
+                    {% if entry.category_leader %}<span class="tag tag-new" style="margin-left:4px;" title="Rank-1 in at least one category">★</span>{% endif %}
                   </td>
-                  <td class="col-val"><span class="score-pill">{{ entry.momentum_score }}</span></td>
-                  <td class="col-val">{{ entry.fast_risers or '—' }}</td>
-                  <td class="col-val">{{ entry.new_stars or '—' }}</td>
-                  <td class="col-val">{{ entry.top30_general or '—' }}</td>
-                  <td class="col-val">{{ entry.top30_coding or '—' }}</td>
-                  <td style="color: var(--text-secondary); max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="{{ entry.top_model }}">{{ entry.top_model }}</td>
-                  <td class="col-val"><span class="rank-num">{{ entry.best_rank }}</span></td>
+                  <td class="col-val"><span class="score-pill">{{ entry.investment_score }}</span></td>
+                  <td class="col-val">
+                    {% if entry.market_share_pct %}
+                    <span title="{{ '%.1f'|format(entry.market_share_pct) }}%">
+                      {{ '%.1f'|format(entry.market_share_pct) }}%
+                      <div style="height:3px;width:{{ [entry.market_share_pct*2, 60]|min|int }}px;background:var(--accent);border-radius:2px;margin-top:2px;opacity:0.6;"></div>
+                    </span>
+                    {% else %}<span class="na">—</span>{% endif %}
+                  </td>
+                  <td class="col-val">
+                    {% if entry.revenue_proxy %}
+                      {% if entry.revenue_proxy >= 1000000 %}${{ "%.1f"|format(entry.revenue_proxy/1000000) }}M
+                      {% elif entry.revenue_proxy >= 1000 %}${{ "%.0f"|format(entry.revenue_proxy/1000) }}K
+                      {% else %}${{ "%.0f"|format(entry.revenue_proxy) }}
+                      {% endif %}
+                    {% else %}<span class="na">—</span>{% endif %}
+                  </td>
+                  <td class="col-val">{{ entry.top10_general }}/{{ entry.top10_coding }}</td>
+                  <td class="col-val">{{ entry.top30_general }}/{{ entry.top30_coding }}</td>
+                  <td class="col-val" style="font-size: 11px; color: var(--text-secondary);">{{ entry.oss_count }}&#x1F513;/{{ entry.proprietary_count }}&#x1F510;</td>
+                  <td class="col-val">{{ (entry.fast_risers + entry.new_stars) or '—' }}</td>
+                  <td style="color: var(--text-secondary); max-width: 180px; overflow: hidden; text-overflow: ellipsis; font-size: 12px;" title="{{ entry.top_model }}">{{ entry.top_model }}</td>
                 </tr>
                 {% else %}
                 <tr>
-                  <td colspan="8" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No momentum data</td>
+                  <td colspan="9" style="text-align: center; color: var(--text-tertiary); padding: 32px 0;">No data</td>
                 </tr>
                 {% endfor %}
               </tbody>

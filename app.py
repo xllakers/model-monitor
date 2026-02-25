@@ -1,7 +1,7 @@
 """Flask entry point for LLM Monitor dashboard."""
 from flask import Flask, render_template, request, jsonify
 from fetchers import lmarena, artificial_analysis, openrouter
-from analyzer import analyze, get_company_momentum, get_model_picks
+from analyzer import analyze, get_company_momentum, get_company_scorecard, get_model_picks
 from ai_analysis import load_cached_insights, save_cached_insights, prepare_summary, get_ai_insights
 
 app = Flask(__name__)
@@ -25,7 +25,8 @@ def index():
     data = analyze(lm_data, aa_data, or_data)
 
     # Must be called before pagination (needs full rankings)
-    company_momentum = get_company_momentum(data)
+    company_scorecard = get_company_scorecard(data)
+    company_momentum = company_scorecard  # backward compat alias
     model_picks = get_model_picks(data)
 
     sort_map = {
@@ -68,6 +69,7 @@ def index():
 
     data["rankings"] = paginated_rankings
     data["company_momentum"] = company_momentum
+    data["company_scorecard"] = company_scorecard
     data["model_picks"] = model_picks
     data["ai_insights"] = load_cached_insights()
     data["page"] = page
@@ -90,9 +92,9 @@ def ai_insights_endpoint():
     aa_data = artificial_analysis.fetch()
     or_data = openrouter.fetch()
     data = analyze(lm_data, aa_data, or_data)
-    momentum = get_company_momentum(data)
+    scorecard = get_company_scorecard(data)
     picks = get_model_picks(data)
-    summary = prepare_summary(data, momentum, picks)
+    summary = prepare_summary(data, scorecard, picks)
     text = get_ai_insights(summary)
     if text:
         save_cached_insights(text)
