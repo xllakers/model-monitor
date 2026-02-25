@@ -1,7 +1,8 @@
 """Flask entry point for LLM Monitor dashboard."""
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from fetchers import lmarena, artificial_analysis, openrouter
-from analyzer import analyze
+from analyzer import analyze, get_company_momentum, get_model_picks
+from ai_analysis import load_cached_insights, save_cached_insights, prepare_summary, get_ai_insights
 
 app = Flask(__name__)
 
@@ -22,6 +23,10 @@ def index():
     aa_data = artificial_analysis.fetch()
     or_data = openrouter.fetch()
     data = analyze(lm_data, aa_data, or_data)
+
+    # Must be called before pagination (needs full rankings)
+    company_momentum = get_company_momentum(data)
+    model_picks = get_model_picks(data)
 
     sort_map = {
         "rank": "rank",
@@ -47,10 +52,12 @@ def index():
     for cat in data["rankings"]:
         sort_list(data["rankings"][cat], sort_lb_by, sort_lb_order)
     
-    for cat in data["fast_risers"]:
-        sort_list(data["fast_risers"][cat], sort_fr_by, sort_fr_order)
-        
-    sort_list(data["new_stars"], sort_ns_by, sort_ns_order)
+    for window in ("7d", "30d"):
+        for cat in data["fast_risers"].get(window, {}):
+            sort_list(data["fast_risers"][window][cat], sort_fr_by, sort_fr_order)
+
+    for window in ("7d", "30d"):
+        sort_list(data["new_stars"][window], sort_ns_by, sort_ns_order)
 
     # Paginate rankings
     paginated_rankings = {}
@@ -62,6 +69,9 @@ def index():
         data[f"{cat}_total"] = total
 
     data["rankings"] = paginated_rankings
+    data["company_momentum"] = company_momentum
+    data["model_picks"] = model_picks
+    data["ai_insights"] = load_cached_insights()
     data["page"] = page
     data["tab"] = tab
     data["sort_lb_by"] = sort_lb_by
@@ -74,6 +84,22 @@ def index():
     data["total_pages"] = (max(data["general_total"], data["coding_total"]) + per_page - 1) // per_page
 
     return render_template("index.html", **data)
+
+
+@app.route("/ai-insights", methods=["POST"])
+def ai_insights_endpoint():
+    lm_data = lmarena.fetch()
+    aa_data = artificial_analysis.fetch()
+    or_data = openrouter.fetch()
+    data = analyze(lm_data, aa_data, or_data)
+    momentum = get_company_momentum(data)
+    picks = get_model_picks(data)
+    summary = prepare_summary(data, momentum, picks)
+    text = get_ai_insights(summary)
+    if text:
+        save_cached_insights(text)
+        return jsonify({"status": "ok", "text": text})
+    return jsonify({"status": "error", "text": "Claude CLI unavailable"}), 500
 
 
 if __name__ == "__main__":

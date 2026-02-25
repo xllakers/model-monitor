@@ -7,9 +7,13 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-CACHE_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "lmarena_cache.json")
-SNAPSHOT_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "lmarena_snapshot.json")
-CACHE_TTL = 7200  # 2 hours
+_DIR = os.path.dirname(__file__)
+CACHE_FILE        = os.path.join(_DIR, "..", "data", "lmarena_cache.json")
+SNAPSHOT_7D_FILE  = os.path.join(_DIR, "..", "data", "lmarena_snapshot_7d.json")
+SNAPSHOT_30D_FILE = os.path.join(_DIR, "..", "data", "lmarena_snapshot_30d.json")
+CACHE_TTL         = 7200        # 2 hours
+SNAPSHOT_7D_TTL   = 7 * 86400  # 7 days
+SNAPSHOT_30D_TTL  = 30 * 86400 # 30 days
 
 BASE_URL = "https://arena.ai"
 CATEGORIES = {
@@ -39,6 +43,24 @@ def _save_cache(data):
     os.makedirs(os.path.dirname(CACHE_FILE), exist_ok=True)
     with open(CACHE_FILE, "w") as f:
         json.dump(data, f)
+
+
+def _load_snapshot(path: str) -> Optional[dict]:
+    """Load snapshot and return its 'current' rankings dict, or None if missing."""
+    if not os.path.exists(path):
+        return None
+    with open(path) as f:
+        snap = json.load(f)
+    return snap.get("current")
+
+
+def _rotate_snapshot(path: str, current: dict, now: float, ttl: int) -> None:
+    """Write new snapshot if file is missing or older than ttl seconds."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    age = now - os.path.getmtime(path) if os.path.exists(path) else float("inf")
+    if age >= ttl:
+        with open(path, "w") as f:
+            json.dump({"current": current, "fetched_at": now}, f)
 
 
 def _parse_score(text: str) -> Optional[float]:
@@ -96,10 +118,8 @@ def fetch() -> dict:
             "general": [{rank, model_id, score, votes}, ...],
             "coding":  [{rank, model_id, score, votes}, ...],
           },
-          "previous": {  # older snapshot for delta (may be None)
-            "general": [...],
-            "coding":  [...],
-          },
+          "previous_7d":  {"general": [...], "coding": [...]},  # 7-day baseline
+          "previous_30d": {"general": [...], "coding": [...]},  # 30-day baseline
           "fetched_at": unix_timestamp,
         }
     """
@@ -107,11 +127,15 @@ def fetch() -> dict:
     if cached is not None:
         return cached
 
-    # Rotate: current → previous before fetching new
-    previous = None
-    if os.path.exists(SNAPSHOT_FILE):
-        with open(SNAPSHOT_FILE) as f:
-            previous = json.load(f)
+    # Seed: copy legacy snapshot to new files on first run
+    legacy = os.path.join(_DIR, "..", "data", "lmarena_snapshot.json")
+    for path in (SNAPSHOT_7D_FILE, SNAPSHOT_30D_FILE):
+        if not os.path.exists(path) and os.path.exists(legacy):
+            import shutil
+            shutil.copy2(legacy, path)
+
+    previous_7d = _load_snapshot(SNAPSHOT_7D_FILE)
+    previous_30d = _load_snapshot(SNAPSHOT_30D_FILE)
 
     current = {}
     for cat, path in CATEGORIES.items():
@@ -120,14 +144,13 @@ def fetch() -> dict:
     now = time.time()
     data = {
         "current": current,
-        "previous": previous,
+        "previous_7d": previous_7d,
+        "previous_30d": previous_30d,
         "fetched_at": now,
     }
 
-    # Save new snapshot as the "previous" for next rotation
-    os.makedirs(os.path.dirname(SNAPSHOT_FILE), exist_ok=True)
-    with open(SNAPSHOT_FILE, "w") as f:
-        json.dump({"current": current, "fetched_at": now}, f)
+    _rotate_snapshot(SNAPSHOT_7D_FILE, current, now, SNAPSHOT_7D_TTL)
+    _rotate_snapshot(SNAPSHOT_30D_FILE, current, now, SNAPSHOT_30D_TTL)
 
     _save_cache(data)
     return data
