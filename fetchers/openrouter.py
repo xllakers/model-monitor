@@ -67,6 +67,7 @@ def _fetch_pricing() -> dict[str, dict]:
                 "price_output": round(price_out, 4),
                 "created": m.get("created"),
                 "context_length": m.get("context_length"),
+                "hugging_face_id": m.get("hugging_face_id"),
                 "max_completion_tokens": (m.get("top_provider") or {}).get("max_completion_tokens"),
             }
     return result

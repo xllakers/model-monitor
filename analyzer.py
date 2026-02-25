@@ -27,11 +27,14 @@ def get_lab_from_model_id(model_id: str) -> str:
     return "Unknown"
 
 
-def get_is_open_source(model_id: str) -> bool:
+def get_is_open_source(model_id: str, hf_id: Optional[str] = None) -> bool:
+    if hf_id and hf_id.strip():
+        return True
     mid = model_id.split("/", 1)[-1].lower()
     OPEN = ["llama", "gemma", "mistral", "mixtral", "ministral", "deepseek",
             "qwen", "qwq", "phi", "command-r", "granite", "olmo", "molmo",
-            "jamba", "llama-3.1-nemotron", "llama-3.3-nemotron", "yi", "glm"]
+            "jamba", "llama-3.1-nemotron", "llama-3.3-nemotron", "yi", "glm",
+            "kimi", "minimax", "abab"]
     return any(mid.startswith(p) for p in OPEN)
 
 
@@ -139,6 +142,7 @@ def analyze(lmarena: dict, aa: dict, or_data: dict) -> dict:
             or_volume = usage_info.get("tokens")
             
             created_ts = price_info.get("created")
+            hf_id = price_info.get("hugging_face_id")
             days_in_board = int((time.time() - created_ts) / 86400) if created_ts else None
 
             merged.append({
@@ -159,7 +163,7 @@ def analyze(lmarena: dict, aa: dict, or_data: dict) -> dict:
                 "is_new_star": False,
                 "lab": get_lab_from_model_id(mid),
                 "lab_logo": logos.get_logo(get_lab_from_model_id(mid)),
-                "is_open_source": get_is_open_source(mid),
+                "is_open_source": get_is_open_source(mid, hf_id),
             })
 
         rankings[cat] = merged
