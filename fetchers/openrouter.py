@@ -91,19 +91,36 @@ def _fetch_usage_ranks() -> dict[str, dict[str, float]]:
     if not chunks:
         return {}
 
-    latest_date = max(c[0] for c in chunks)
-    ys_raw = next(ys for date, ys in chunks if date == latest_date)
+    # Aggregate models by date (OpenRouter splits chart data into multiple chunks)
+    date_to_models = {}
+    for date, ys_raw in chunks:
+        if date not in date_to_models:
+            date_to_models[date] = {}
+        
+        # Unescape \" → " then parse as JSON object
+        clean = ys_raw.replace('\\"', '"')
+        try:
+            ys = json.loads("{" + clean + "}")
+            for k, v in ys.items():
+                if k.lower() == "others" or "/" not in k:
+                    continue
+                # Take max volume if model appears in multiple chunks for same date
+                if k not in date_to_models[date] or v > date_to_models[date][k]:
+                    date_to_models[date][k] = v
+        except Exception:
+            continue
 
-    # Unescape \" → " then parse as JSON object
-    clean = ys_raw.replace('\\"', '"')
-    try:
-        ys = json.loads("{" + clean + "}")
-    except Exception:
+    if not date_to_models:
         return {}
 
-    # Sort by token volume desc, skip "Others"
+    # Pick the date with the highest total volume (likely the latest full week)
+    # This avoids "unstable" partial-week data or daily data points.
+    best_date = max(date_to_models.keys(), key=lambda d: sum(date_to_models[d].values()))
+    ys = date_to_models[best_date]
+
+    # Sort by token volume desc
     sorted_models = sorted(
-        ((k, v) for k, v in ys.items() if k.lower() != "others"),
+        ys.items(),
         key=lambda x: -x[1],
     )
     return {m.lower(): {"rank": rank, "tokens": tokens} for rank, (m, tokens) in enumerate(sorted_models, start=1)}
